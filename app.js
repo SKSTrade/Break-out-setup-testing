@@ -44,7 +44,7 @@ const CSV_KEYS=[...new Set(['id','createdAt','updatedAt','project','version','mo
   'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','lateEntry','invalidExecution','htfObstacle','manualVeto','riskNote',
   'baseSize','validSetup','hardVeto','finalSize','executable','status','skipReason','normalizedR','actualR','mfeR','maeR','reachedRF','timeToRF','tp2','deepRF','deepRFOriginalSL','deepRFShadowMfe','deepRFNoRF',
   'exitTimestamp','originalMatch','originalTradeId','notes','chartImageCount'])];
-let records=[];let editingId=null;let selectedIds=new Set();let currentDecision=null;let existingPreviewURLs=[];let rfAuto=false;let pendingImages=[];
+let records=[];let editingId=null;let selectedIds=new Set();let currentDecision=null;let existingPreviewURLs=[];let rfAuto=false;let pendingImages=[];let isSaving=false;let imagePreviewGeneration=0;let awaitingNewTradeInput=false;
 const escapeHtml=(v)=>String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const numberText=(v)=>v===null||v===undefined||v===''?'—':Number(v).toFixed(2);
 const safeString=(v)=>String(v??'');
@@ -78,7 +78,8 @@ function init(){
   $('tradeDate').value=localDate();
   applyProductEntryTFDefault();
   try {const data=JSON.parse(localStorage.getItem(STORE)||'[]');records=Array.isArray(data)?data.filter(x=>x&&typeof x==='object'):[];} catch {records=[];}
-  $('tradeForm').addEventListener('input',()=>update());$('tradeForm').addEventListener('change',(e)=>{
+  $('tradeForm').addEventListener('input',()=>{awaitingNewTradeInput=false;update();});$('tradeForm').addEventListener('change',(e)=>{
+    awaitingNewTradeInput=false;
     if(e.target?.id==='product')applyProductEntryTFDefault();
     if(e.target?.id==='timeToRF'&&$('timeToRF').value.trim())rfAuto=true;
     if(e.target?.id==='reachedRF'&&$('reachedRF').value==='No'){$('timeToRF').value='';rfAuto=false;}
@@ -180,7 +181,7 @@ function fillForm(record){
   document.querySelectorAll('input[name="mode"]').forEach(x=>x.checked=x.value===record.mode);
   document.querySelectorAll('input[name="direction"]').forEach(x=>x.checked=x.value===record.tradeDirection);
   document.querySelectorAll('#q2SubtypeChoices input').forEach(x=>x.checked=(record.q2Subtypes||[]).includes(x.value));
-  pendingImages=[];$('screenshotInput').value='';$('pasteNotice').textContent='可貼上更多圖片；新圖片會喺更新紀錄時儲存。';editingId=record.id;rfAuto=Boolean(record.timeToRF);$('saveBtn').textContent='更新研究紀錄';
+  pendingImages=[];$('screenshotInput').value='';$('pasteNotice').textContent='可貼上更多圖片；新圖片會喺更新紀錄時儲存。';editingId=record.id;awaitingNewTradeInput=false;rfAuto=Boolean(record.timeToRF);$('saveBtn').textContent='更新研究紀錄';
   $('saveNotice').textContent=`編輯中：${record.tradeDate} ${record.product} · ${record.id}`;update();renderImagePreviews(record.id);
 }
 function decisionMarkup(summary){
@@ -222,24 +223,96 @@ function update(){
   $('skipReasonView').textContent=d.skipReason?`原因：${d.skipReason}`:'已符合所有自動驗證項目；具體Price Action仍需交易者判斷。';
 }
 function saveStore(){try{localStorage.setItem(STORE,JSON.stringify(records));return true;}catch(err){$('saveNotice').textContent='本機儲存失敗（可能空間已滿）：'+err.message;return false;}}
-async function saveRecord(ev){ev.preventDefault();update();const data=getInput();if(!/^\d{4}-\d{2}-\d{2}$/.test(data.tradeDate)){ $('saveNotice').textContent='請先填寫有效交易日期。';return; }const old=records.find(r=>r.id===editingId);const now=new Date().toISOString();
-  const entry={...data,...currentDecision,id:old?.id||uid(),createdAt:old?.createdAt||now,updatedAt:now,mode:data.mode,tradeDirection:data.tradeDirection};
-  // Manual values must not override computed fields, but retain entered normalizedR and MFE.
-  entry.normalizedR=E.toNumber(data.normalizedR);entry.mfeR=E.toNumber(data.mfeR);entry.maeR=E.toNumber(data.maeR);
-  entry.chartImageCount=old?.chartImageCount||0;
-  if(entry.validSetup==='No'){
-    // An unqualified BHE/retest is NOT a hypothetical trade. Keep only skip context.
-    entry.normalizedR=null;entry.mfeR=null;entry.maeR=null;entry.actualR=null;entry.tp2='';
-    entry.reachedRF='No';entry.timeToRF=null;entry.deepRF='No';entry.deepRFOriginalSL='';entry.deepRFShadowMfe='';entry.deepRFNoRF='';
-  }
-  if(old)records=records.map(r=>r.id===old.id?entry:r);else records.unshift(entry);
-  if(!saveStore())return;
-  const chosen=pendingImages.slice();let imageError='';
-  if(chosen.length){try{await putImages(entry.id,chosen);entry.chartImageCount=(await getImages(entry.id)).length;saveStore();pendingImages=[];}catch(e){imageError='；圖片儲存失敗，請重試：'+e.message;}}
-  $('saveNotice').textContent=`已儲存 ${entry.tradeDate||'無日期'} ${entry.product}｜${entry.status}｜Research Size ${numberText(entry.finalSize)}${imageError}`;
-  editingId=entry.id;$('saveBtn').textContent='更新研究紀錄';$('screenshotInput').value='';renderImagePreviews(entry.id);renderHistory();renderStats();
+// Keep the market / product / direction / P-Q context ready for another trade,
+// but never carry over trade-specific results or a previous record ID.
+function prepareNextTradeAfterSave(){
+  editingId=null;
+  rfAuto=false;
+  pendingImages=[];
+  awaitingNewTradeInput=true;
+  $('screenshotInput').value='';
+  clearImagePreviews();
+  $('pasteNotice').textContent='圖片會跟新紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';
+  // Restore the frozen V0.1.4 validation defaults; the new first retest must
+  // be confirmed independently rather than silently inherited from last trade.
+  for(const id of ['rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','entryInSession'])$(id).checked=true;
+  for(const id of ['firstRetestValid','retestInSession','londonBreakoutIntact','priorRetestOccurred','nyRebreak','lateEntry','invalidExecution','htfObstacle','manualVeto','originalMatch'])$(id).checked=false;
+  for(const id of [
+    'retestAcceptance','retestInternal','bheToRetest','entryMainStructure','entryWorkingStructure',
+    'riskNote','normalizedR','mfeR','maeR','timeToRF','deepRFOriginalSL',
+    'deepRFShadowMfe','deepRFNoRF','exitTimestamp','originalTradeId','notes'
+  ])$(id).value='';
+  $('retestVsReclaim').value='na';
+  $('reachedRF').value='No';
+  $('deepRF').value='No';
+  $('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';
+  update();
 }
-function resetForm(){editingId=null;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';  const form=$('tradeForm');form.reset();delete $('bheCompletedSession').dataset.product;delete $('entrySession').dataset.product;document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();applyProductEntryTFDefault();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
+async function saveRecord(ev){
+  ev.preventDefault();
+  if(isSaving)return; // Do not create duplicates while photo writes are pending.
+  if(!editingId&&awaitingNewTradeInput){
+    $('saveNotice').textContent='上一筆已儲存，請先輸入或調整下一單資料，避免重覆儲存相同交易。';
+    return;
+  }
+  update();
+  const data=getInput();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data.tradeDate)){
+    $('saveNotice').textContent='請先填寫有效交易日期。';
+    return;
+  }
+  isSaving=true;
+  $('saveBtn').disabled=true;
+  $('resetBtn').disabled=true;
+  try{
+    const old=records.find(r=>r.id===editingId);
+    const now=new Date().toISOString();
+    const entry={...data,...currentDecision,id:old?.id||uid(),createdAt:old?.createdAt||now,updatedAt:now,mode:data.mode,tradeDirection:data.tradeDirection};
+    entry.normalizedR=E.toNumber(data.normalizedR);
+    entry.mfeR=E.toNumber(data.mfeR);
+    entry.maeR=E.toNumber(data.maeR);
+    entry.chartImageCount=old?.chartImageCount||0;
+    if(entry.validSetup==='No'){
+      // Invalid setup cannot be included in hypothetical trade statistics.
+      entry.normalizedR=null;entry.mfeR=null;entry.maeR=null;entry.actualR=null;entry.tp2='';
+      entry.reachedRF='No';entry.timeToRF=null;entry.deepRF='No';entry.deepRFOriginalSL='';entry.deepRFShadowMfe='';entry.deepRFNoRF='';
+    }
+    const previousRecords=records;
+    if(old)records=records.map(r=>r.id===old.id?entry:r);
+    else records=[entry,...records];
+    if(!saveStore()){records=previousRecords;return;}
+
+    const chosen=pendingImages.slice();
+    if(chosen.length){
+      try{
+        await putImages(entry.id,chosen);
+      }catch(error){
+        // Keep the same ID and unsaved images on screen for an explicit retry.
+        // The record's text has already been saved; retry must not create a duplicate.
+        editingId=entry.id;
+        awaitingNewTradeInput=false;
+        $('saveBtn').textContent='更新研究紀錄（重試圖片）';
+        $('saveNotice').textContent=`${entry.tradeDate} ${entry.product} 文字紀錄已儲存，但圖片未能完成：${error.message}。保留目前交易方便重試。`;
+        renderImagePreviews(entry.id);
+        renderHistory();renderStats();
+        return;
+      }
+      pendingImages=[];
+      try{entry.chartImageCount=(await getImages(entry.id)).length;}
+      catch{entry.chartImageCount=(old?.chartImageCount||0)+chosen.length;}
+      saveStore();
+    }
+    const message=`已儲存 ${entry.tradeDate} ${entry.product}｜${entry.status}｜Research Size ${numberText(entry.finalSize)}。已進入新紀錄模式，下一次儲存會建立另一筆；保留日期及市場設定，其餘交易結果已清空。`;
+    prepareNextTradeAfterSave();
+    $('saveNotice').textContent=message;
+    renderHistory();renderStats();
+  }finally{
+    isSaving=false;
+    $('saveBtn').disabled=false;
+    $('resetBtn').disabled=false;
+  }
+}
+function resetForm(){editingId=null;awaitingNewTradeInput=false;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';  const form=$('tradeForm');form.reset();delete $('bheCompletedSession').dataset.product;delete $('entrySession').dataset.product;document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();applyProductEntryTFDefault();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
 function filterValues(id){return new Set(Array.from($(id).querySelectorAll('input:checked')).map(x=>x.value));}
 function multiMatch(set,value){return set.size===0||set.has(String(value??''));}
 function filteredRecords(){const from=$('filterFrom').value,to=$('filterTo').value;const f={};
@@ -266,7 +339,7 @@ $('dialogOverlay').classList.remove('hidden');try{const images=await getImages(r
 }
 function closeDialog(){$('dialogOverlay').classList.add('hidden');$('dialogContent').innerHTML='';clearImageObjectURLs();}
 function csvQuote(v){const value=Array.isArray(v)?v.join('+'):(v===null||v===undefined?'':String(v));return /[",\r\n]/.test(value)?'"'+value.replace(/"/g,'""')+'"':value;}
-function filename(kind,ext){return `BreakoutResearch-V0.1.5-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
+function filename(kind,ext){return `BreakoutResearch-V0.1.6-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
 function downloadBlob(blob,name){const link=document.createElement('a');const url=URL.createObjectURL(blob);link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}
 function exportCSV(items,kind){if(!items.length){alert('沒有紀錄可匯出。');return;}const headers=CSV_KEYS.map(k=>COLUMN_LABELS[k]||k);const lines=[headers.map(csvQuote).join(',')];for(const item of items){const source=normalizeLegacySessionFields(item);const values=CSV_KEYS.map(key=>{let v=source[key];if(key==='timeToRF')v=v!==null&&v!==undefined&&v!==''?E.durationText(v):'';if(BOOLEAN_IDS.has(key))v=v?'Yes':'No';return csvQuote(v);});lines.push(values.join(','));}
 downloadBlob(new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),filename(kind,'csv'));}
@@ -339,10 +412,11 @@ async function putImages(recordId,files){const db=await openDB();try{await new P
 async function getImages(recordId){const db=await openDB();try{return await new Promise((resolve,reject)=>{const tx=db.transaction(IMAGE_TABLE,'readonly');const req=tx.objectStore(IMAGE_TABLE).index('recordId').getAll(recordId);req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);});}finally{db.close();}}
 async function deleteImages(recordId){const db=await openDB();try{await new Promise((resolve,reject)=>{const tx=db.transaction(IMAGE_TABLE,'readwrite');const index=tx.objectStore(IMAGE_TABLE).index('recordId');const cursor=index.openCursor(recordId);cursor.onsuccess=()=>{const c=cursor.result;if(c){c.delete();c.continue();}};tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
 function clearImageObjectURLs(){existingPreviewURLs.forEach(u=>URL.revokeObjectURL(u));existingPreviewURLs=[];}
-function clearImagePreviews(){clearImageObjectURLs();$('imagePreview').innerHTML='';}
+function clearImagePreviews(){imagePreviewGeneration++;clearImageObjectURLs();$('imagePreview').innerHTML='';}
 function addPendingImages(files,origin){
   const images=Array.from(files||[]).filter(f=>f&&String(f.type||'').startsWith('image/'));
   if(!images.length){$('pasteNotice').textContent='未發現圖片。請先複製截圖，再按 Ctrl+V / ⌘+V。';return false;}
+  awaitingNewTradeInput=false;
   for(const f of images){const ext=(f.type.split('/')[1]||'png').replace(/[^a-z0-9]/gi,'').slice(0,8)||'png';
     pendingImages.push(new File([f],`breakout-${origin}-${Date.now()}-${pendingImages.length+1}.${ext}`,{type:f.type,lastModified:Date.now()}));}
   $('pasteNotice').textContent=`已新增 ${images.length} 張${origin==='paste'?'貼上':origin==='drop'?'拖放':'上傳'}圖片；目前有 ${pendingImages.length} 張待儲存。按「儲存研究紀錄」後才會寫入。`;
@@ -363,7 +437,7 @@ async function readClipboardImages(){
   }catch(e){$('pasteNotice').textContent='無法讀取剪貼簿（可能未授權）。請點擊貼圖區再按 Ctrl+V / ⌘+V。';$('pasteZone').focus();}
 }
 function onScreenshotDrop(e){e.preventDefault();$('pasteZone').classList.remove('drag-active');addPendingImages(e.dataTransfer?.files,'drop');}
-async function renderImagePreviews(recordId){clearImagePreviews();if(recordId){try{const files=await getImages(recordId);for(const photo of files){const url=URL.createObjectURL(photo.blob);existingPreviewURLs.push(url);addPreview(url,photo.name,'已儲存');}}catch{}}
+async function renderImagePreviews(recordId){clearImagePreviews();const version=imagePreviewGeneration;if(recordId){try{const files=await getImages(recordId);if(version!==imagePreviewGeneration)return;for(const photo of files){const url=URL.createObjectURL(photo.blob);existingPreviewURLs.push(url);addPreview(url,photo.name,'已儲存');}}catch{}}
 for(const [idx,file] of pendingImages.entries()){const url=URL.createObjectURL(file);existingPreviewURLs.push(url);addPreview(url,file.name,'待儲存',idx);}}
 function addPreview(url,name,state,pendingIndex=null){const box=document.createElement('div');box.className='preview-item';const im=document.createElement('img');im.src=url;im.alt=name;const label=document.createElement('small');label.textContent=state;box.append(im,label);
 if(pendingIndex!==null){const remove=document.createElement('button');remove.type='button';remove.className='secondary-btn mini-button';remove.textContent='移除待儲存圖片';remove.dataset.removePending=String(pendingIndex);box.append(remove);}

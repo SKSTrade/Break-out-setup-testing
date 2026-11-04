@@ -96,3 +96,13 @@
 參考 Master Trade V1.30.35：桌面寬螢幕右側固定快速跳轉面板，窄螢幕／手機以「章節 ↑」按鈕展開。可直接跳往「紀錄／產品、Market State、Location／Q、Breakout／Retest、Risk／Sizing、完整判斷、結果／儲存」或返回頂部。
 
 使用平滑捲動及適當 header offset；支援 Escape、按外側關閉；切換到紀錄庫／研究統計／研究規則頁會隱藏。只新增 section DOM id／CSS／navigation listeners，不改 sizing engine、Research V0.1 規則、CSV schema、localStorage 或 IndexedDB。
+
+
+## V0.1.6｜儲存後自動進入下一單
+
+- 成功儲存紀錄後自動退出編輯模式；下次按儲存會產生新的 Record ID，避免覆蓋上一筆。
+- 保留日期、商品、交易方向、Market State、P/Q、Session設定，方便同一市場繼續輸入下一單。
+- 清空上一單的 Normalized R、MFE/MAE、RF/TP2輸入、Deep-RF、Retest研究欄、Hard Veto、Notes、截圖待上傳清單，並恢復V0.1.4 Validation六個已勾／兩個未勾的預設。
+- 成功儲存相片後會清除畫面預覽，但舊紀錄相片仍保存在其 Record ID 下；從紀錄庫編輯仍可正常更新原紀錄。
+- 如果圖片儲存失敗，文字記錄已完成時保留原ID及待上傳圖片作重試，避免產生重複紀錄。
+- 研究計算規則、數據儲存key、CSV schema、Master Trade V1.30.35均不變。
