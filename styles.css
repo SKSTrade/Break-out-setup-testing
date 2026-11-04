@@ -1636,3 +1636,14 @@ dialog::backdrop {
 .dialog-overlay {position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.68);display:grid;place-items:center;padding:15px}.dialog-card {width:min(650px,100%);max-height:88vh;overflow:auto;background:var(--card);border-radius:18px;border:1px solid var(--border);padding:19px}.dialog-card h2 {margin-top:0}.detail-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;font-size:.83rem}.detail-grid>div {border-bottom:1px solid var(--border);padding:8px 0}.detail-grid strong {display:block;margin-top:4px}.image-preview {display:flex;gap:10px;flex-wrap:wrap}.image-preview img {width:120px;max-height:145px;object-fit:cover;border:1px solid var(--border);border-radius:10px}.image-preview .preview-item {display:grid;gap:4px}
 .hidden {display:none!important}textarea{width:100%}hr{border:0;border-top:1px solid var(--border);margin:18px 0}
 @media(max-width:550px){main{padding:11px}.card{padding:14px}.grid2{grid-template-columns:1fr}.check-grid,.rule-grid{grid-template-columns:1fr}.filter-three{grid-template-columns:1fr}.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sizing-panel small{font-size:.65rem}.sizing-panel strong{font-size:1.22rem}.tab-button {font-size:.8rem;padding:9px 5px}.app-header{padding-left:12px;padding-right:12px}.app-header h1{font-size:1.09rem}.header-subtitle{font-size:.68rem}}
+
+/* Research V0.1.1: clipboard screenshots */
+.paste-zone {cursor: text; border: 2px dashed var(--border); transition: border-color .15s ease, background .15s ease; min-height:100px;}
+.paste-zone.drag-active {border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg));}
+.paste-zone small {font-size:.82rem; font-weight:400;}
+.file-upload-action {display:inline-flex; align-items:center; justify-content:center; padding:10px 13px; border:1px solid var(--border); border-radius:10px; cursor:pointer; background:var(--card); font-size:.9rem; font-weight:600;}
+.file-upload-action input[type=file] {position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
+.paste-image-section .image-preview {margin-top:8px;}
+.paste-image-section .image-preview .preview-item {min-width:145px;}
+.paste-image-section .image-preview .preview-item img {width:150px;height:110px;object-fit:contain;}
+.paste-image-section .notice {font-size:.82rem; line-height:1.4;}

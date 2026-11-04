@@ -8,7 +8,7 @@
 <script defer src="./engine.js"></script><script defer src="./app.js"></script>
 </head>
 <body>
-<header class="app-header"><div><p class="eyebrow">INDEPENDENT RESEARCH PROJECT · RESEARCH ONLY</p><h1>Break out setup testing</h1><p class="header-subtitle">Opening Range Breakout · BHE · First Retest</p></div><span class="version-badge">V0.1</span></header>
+<header class="app-header"><div><p class="eyebrow">INDEPENDENT RESEARCH PROJECT · RESEARCH ONLY</p><h1>Break out setup testing</h1><p class="header-subtitle">Opening Range Breakout · BHE · First Retest</p></div><span class="version-badge">V0.1.1</span></header>
 <nav class="tab-bar" aria-label="主要頁面"><button type="button" class="tab-button active" data-tab="calculator">計算器</button><button type="button" class="tab-button" data-tab="history">紀錄庫</button><button type="button" class="tab-button" data-tab="research">研究統計</button><button type="button" class="tab-button" data-tab="rulebook">研究規則</button></nav>
 <main>
 <section class="tab-panel active" id="calculator">
@@ -20,7 +20,7 @@
 <div class="grid2"><label>參考範圍（Auto）<input id="referenceRange" readonly></label><label>Breakout Session（Auto）<input id="breakoutSession" readonly></label></div>
 <label>交易方向</label><div class="segmented" id="dirSwitch"><label><input type="radio" name="direction" value="Long" checked><span>Long ↑</span></label><label><input type="radio" name="direction" value="Short"><span>Short ↓</span></label></div>
 <div class="grid2"><label>開市前 Range 方向<select id="preOpenDirection"><option value="">未確認／唔清楚</option><option value="Bull">Bullish ↑</option><option value="Bear">Bearish ↓</option></select></label><label>Opening Context（Auto）<input readonly id="openingContext"></label></div>
-<div class="grid2"><label>Entry TF<select id="entryTF"><option>1M</option><option>3M</option><option selected>5M</option><option>15M</option><option>30M</option><option>1H</option><option>2H</option><option>4H</option></select></label><label>入場時間（可選）<input type="datetime-local" id="entryTimestamp"></label></div>
+<label>Entry TF<select id="entryTF"><option>1M</option><option>3M</option><option selected>5M</option><option>15M</option><option>30M</option><option>1H</option><option>2H</option><option>4H</option></select></label>
 </article>
 <article class="card"><div class="section-title"><span>02</span><h2>Market State + Structural Gap</h2></div>
 <div class="grid2"><label>Main Judge TF<select id="mainTF"><option>15M</option><option>30M</option><option>1H</option><option selected>4H</option><option>D</option><option>W</option></select></label><label>Main Judge Market State<select id="mainState" class="state-select"></select></label></div>
@@ -46,7 +46,6 @@
 <label class="toggle-row"><input type="checkbox" id="firstRetestValid"><span><strong>First Valid Retest</strong><small>首次Retest有效，非第二次補救</small></span></label>
 <label class="toggle-row"><input type="checkbox" id="retestInSession"><span><strong>First Retest喺Session內</strong><small>尤其FX/XAU London Session內必須完成</small></span></label>
 </div>
-<div class="grid2"><label>Breakout時間（可選）<input type="datetime-local" id="breakoutTimestamp"></label><label>First Retest時間（可選）<input type="datetime-local" id="retestTimestamp"></label></div>
 <div class="grid2"><label>Retest Acceptance<select id="retestAcceptance"><option value="">未記錄</option><option>Hold</option><option>Partial / Weak</option><option>Failure / Rejected</option></select></label><label>Retest Internal Structure<select id="retestInternal"><option value="">未記錄</option><option value="none">None / One-leg</option><option value="structured">Structured</option></select></label></div>
 <div class="grid2"><label>Retest vs Reclaim Structure<select id="retestVsReclaim"><option value="na">N/A</option><option value="hold">Hold</option><option value="sweepReclaim">Sweep-Reclaim</option><option value="breakAccept">Break-Accept</option></select></label><label>BHE → First Retest（H/M，可選）<input type="text" id="bheToRetest" placeholder="例：1H30M"></label></div>
 <div class="grid2"><label>Entry-TF Main Structure<select id="entryMainStructure"><option value="">未記錄</option><option>Opposing Intact</option><option>Opposing Broken / Transition</option><option>Aligned</option></select></label><label>Entry-TF Working Structure<select id="entryWorkingStructure"><option value="">未記錄</option><option>Opposing Intact</option><option>Opposing Broken / Transition</option><option>Aligned</option></select></label></div>
@@ -68,7 +67,13 @@
 <div id="deepRFPanel" class="conditional-panel hidden"><div class="grid2"><label>RF後原SL被打<select id="deepRFOriginalSL"><option value="">未記錄</option><option>No</option><option>Yes</option></select></label><label>Deep-RF Shadow MFE R<input id="deepRFShadowMfe" type="number" step="0.01"></label></div><label>假設沒有RF時最終R<input id="deepRFNoRF" type="number" step="0.01"></label></div>
 <div class="grid2"><label>Exit時間（可選）<input type="datetime-local" id="exitTimestamp"></label><label>原Journal對應Trade ID（可選）<input type="text" id="originalTradeId" placeholder="防止合併績效重複計數"></label></div>
 <label class="toggle-row"><input id="originalMatch" type="checkbox"><span><strong>Original Journal Match</strong><small>新Project獨立紀錄，合併Portfolio時不得重複計入</small></span></label>
-<label>截圖（選填，儲存在本App獨立IndexedDB）<input type="file" id="screenshotInput" accept="image/*" multiple></label><div id="imagePreview" class="image-preview"></div>
+<div class="paste-image-section" aria-label="截圖上傳或貼上">
+<strong class="field-label">截圖（選填｜可直接貼上）</strong>
+<div id="pasteZone" class="paste-zone" tabindex="0" role="region" aria-label="按此後用Ctrl+V或Command+V貼上截圖">按一下此區域，再按 <strong>Ctrl+V / ⌘+V</strong> 貼上截圖<br><small>亦支援直接拖放圖片；連續貼上多張後一併儲存</small></div>
+<div class="action-row"><button type="button" id="pasteClipboardBtn" class="secondary-btn">從剪貼簿加入圖片</button><label class="file-upload-action">選擇圖片檔案<input type="file" id="screenshotInput" accept="image/*" multiple></label></div>
+<p id="pasteNotice" class="notice" aria-live="polite">圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。</p>
+<div id="imagePreview" class="image-preview"></div>
+</div>
 <label>Notes<textarea id="notes" rows="4" placeholder="Opening range行為、BHE、Retest、控制權、回測註解"></textarea></label>
 <div class="action-row"><button type="submit" class="primary-btn" id="saveBtn">儲存研究紀錄（包括0注／Skip）</button><button type="button" id="resetBtn" class="secondary-btn">清空 / 新紀錄</button></div><p id="saveNotice" class="notice" aria-live="polite"></p>
 </article>

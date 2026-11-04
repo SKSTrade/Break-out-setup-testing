@@ -7,9 +7,9 @@ const STORE='breakoutResearchV01Records';
 const IMAGE_DB='breakoutResearchV01Images';
 const IMAGE_TABLE='photos';
 const INPUTS=[
-  'tradeDate','product','referenceRange','breakoutSession','preOpenDirection','entryTF','entryTimestamp','mainTF','mainState','mainT0Subtype','secondaryTF','officialState','officialT0Subtype','gapMode','gapTrigger','workingState','workingT0Subtype',
+  'tradeDate','product','referenceRange','breakoutSession','preOpenDirection','entryTF','mainTF','mainState','mainT0Subtype','secondaryTF','officialState','officialT0Subtype','gapMode','gapTrigger','workingState','workingT0Subtype',
   'rawP','p3Context','nativeQ','rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','firstRetestValid','retestInSession',
-  'breakoutTimestamp','retestTimestamp','retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','rr','cleanSpaceR',
+  'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','rr','cleanSpaceR',
   'lateEntry','invalidExecution','htfObstacle','manualVeto','riskNote','normalizedR','mfeR','maeR','reachedRF','timeToRF','deepRF','deepRFOriginalSL',
   'deepRFShadowMfe','deepRFNoRF','exitTimestamp','originalTradeId','originalMatch','notes'
 ];
@@ -25,11 +25,11 @@ const COLUMN_LABELS={
   baseSize:'Base Research Size',finalSize:'Final Research Size',validSetup:'Valid Setup',hardVeto:'Hard Veto',executable:'Executable Candidate',
   status:'Entry／Skip Category',skipReason:'Skip Reason',actualR:'Research Actual R',tp2:'去唔去到TP2 Auto',
   tradeDate:'Trade Date',product:'Product',referenceRange:'Reference Range',breakoutSession:'Breakout Session',preOpenDirection:'Pre-open Direction',
-  entryTF:'Entry TF',entryTimestamp:'Entry Timestamp',mainTF:'Main Judge TF',mainState:'Main Judge Market State',mainT0Subtype:'Main T0 Subtype',secondaryTF:'Secondary TF',
+  entryTF:'Entry TF',mainTF:'Main Judge TF',mainState:'Main Judge Market State',mainT0Subtype:'Main T0 Subtype',secondaryTF:'Secondary TF',
   officialState:'Secondary Official Market State',officialT0Subtype:'Secondary Official T0 Subtype',gapMode:'Structural Gap',gapTrigger:'Structural Gap Trigger',workingState:'Secondary Working Market State',workingT0Subtype:'Secondary Working T0 Subtype',
   rawP:'Raw P',p3Context:'P3 Context',nativeQ:'Native Q',rangeEstablished:'Reference Range Established',breakoutSessionValid:'Breakout In Session',
   breakConfirmed:'Break Confirmed',holdConfirmed:'Hold Confirmed',extendConfirmed:'Extend Confirmed',firstRetestValid:'First Valid Retest',retestInSession:'First Retest In Session',
-  breakoutTimestamp:'Breakout Timestamp',retestTimestamp:'Retest Timestamp',retestAcceptance:'Retest Acceptance',retestInternal:'Retest Internal Structure',
+  retestAcceptance:'Retest Acceptance',retestInternal:'Retest Internal Structure',
   retestVsReclaim:'Retest vs Reclaim Structure',bheToRetest:'BHE to First Retest H/M',entryMainStructure:'Entry-TF Main Structure',entryWorkingStructure:'Entry-TF Working Structure',
   rr:'RR',cleanSpaceR:'Clean Expansion Space R',lateEntry:'Late Entry',invalidExecution:'Execution Invalid',htfObstacle:'Hard HTF Obstacle',manualVeto:'Other Hard Veto',riskNote:'Risk Note',
   normalizedR:'Normalized R',mfeR:'MFE R',maeR:'MAE R',reachedRF:'去唔去到推RF位',timeToRF:'Time to RF H/M',deepRF:'Deep-RF Triggered',
@@ -38,11 +38,11 @@ const COLUMN_LABELS={
 };
 const CSV_KEYS=[...new Set(['id','createdAt','updatedAt','project','version','mode','tradeDate','product','family','referenceRange','breakoutSession','tradeDirection','preOpenDirection','openingContext',
   'entryTF','mainTF','mainState','mainT0Subtype','secondaryTF','officialState','officialT0Subtype','gapMode','gapTrigger','workingState','workingT0Subtype','source','effectiveSecondary','directionPermission','rawP','p3Context','researchP','nativeQ','q2Subtypes',
-  'rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','bheValid','firstRetestValid','retestInSession','breakoutTimestamp','retestTimestamp',
+  'rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','bheValid','firstRetestValid','retestInSession',
   'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','rr','cleanSpaceR','lateEntry','invalidExecution','htfObstacle','manualVeto','riskNote',
   'baseSize','validSetup','hardVeto','finalSize','executable','status','skipReason','normalizedR','actualR','mfeR','maeR','reachedRF','timeToRF','tp2','deepRF','deepRFOriginalSL','deepRFShadowMfe','deepRFNoRF',
-  'entryTimestamp','exitTimestamp','originalMatch','originalTradeId','notes','chartImageCount'])];
-let records=[];let editingId=null;let selectedIds=new Set();let currentDecision=null;let existingPreviewURLs=[];let rfAuto=false;
+  'exitTimestamp','originalMatch','originalTradeId','notes','chartImageCount'])];
+let records=[];let editingId=null;let selectedIds=new Set();let currentDecision=null;let existingPreviewURLs=[];let rfAuto=false;let pendingImages=[];
 const escapeHtml=(v)=>String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const numberText=(v)=>v===null||v===undefined||v===''?'—':Number(v).toFixed(2);
 const safeString=(v)=>String(v??'');
@@ -85,7 +85,14 @@ function init(){
     else if($('timeToRF').value.trim()===''&&rfAuto){$('reachedRF').value='No';rfAuto=false;}
     update();
   });
-  $('screenshotInput').addEventListener('change',previewNewImages);
+  $('screenshotInput').addEventListener('change',onScreenshotSelect);
+  $('pasteZone').addEventListener('click',()=>{$('pasteZone').focus();});
+  document.addEventListener('paste',onScreenshotPaste);
+  $('pasteClipboardBtn').addEventListener('click',readClipboardImages);
+  $('pasteZone').addEventListener('dragover',(e)=>{e.preventDefault();$('pasteZone').classList.add('drag-active');});
+  $('pasteZone').addEventListener('dragleave',()=>$('pasteZone').classList.remove('drag-active'));
+  $('pasteZone').addEventListener('drop',onScreenshotDrop);
+  $('imagePreview').addEventListener('click',(e)=>{const btn=e.target.closest('[data-remove-pending]');if(!btn)return;const index=Number(btn.dataset.removePending);if(!Number.isInteger(index)||index<0||index>=pendingImages.length)return;pendingImages.splice(index,1);renderImagePreviews(editingId);});
   document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
   document.querySelectorAll('#history input').forEach(i=>i.addEventListener('change',renderHistory));
   $('clearFilters').addEventListener('click',()=>{document.querySelectorAll('#history input[type=checkbox]').forEach(x=>{if(!x.classList.contains('select-record'))x.checked=false;});$('filterFrom').value='';$('filterTo').value='';renderHistory();});
@@ -112,7 +119,7 @@ function fillForm(record){
   document.querySelectorAll('input[name="mode"]').forEach(x=>x.checked=x.value===record.mode);
   document.querySelectorAll('input[name="direction"]').forEach(x=>x.checked=x.value===record.tradeDirection);
   document.querySelectorAll('#q2SubtypeChoices input').forEach(x=>x.checked=(record.q2Subtypes||[]).includes(x.value));
-  $('screenshotInput').value='';editingId=record.id;rfAuto=Boolean(record.timeToRF);$('saveBtn').textContent='更新研究紀錄';
+  pendingImages=[];$('screenshotInput').value='';$('pasteNotice').textContent='可貼上更多圖片；新圖片會喺更新紀錄時儲存。';editingId=record.id;rfAuto=Boolean(record.timeToRF);$('saveBtn').textContent='更新研究紀錄';
   $('saveNotice').textContent=`編輯中：${record.tradeDate} ${record.product} · ${record.id}`;update();renderImagePreviews(record.id);
 }
 function update(){
@@ -124,9 +131,6 @@ function update(){
   $('q2Panel').classList.toggle('hidden',input.nativeQ!=='Q2');$('deepRFPanel').classList.toggle('hidden',input.deepRF!=='Yes');
   if(input.reachedRF==='No'&&$('timeToRF').value.trim()){$('reachedRF').value='Yes';input.reachedRF='Yes';}
   if(input.reachedRF==='No'){$('timeToRF').value='';}
-  if(input.retestTimestamp&&input.breakoutTimestamp&&new Date(input.retestTimestamp)<new Date(input.breakoutTimestamp)){
-    $('bheToRetest').title='注意：First Retest早於Breakout時間，請核實';
-  } else $('bheToRetest').title='';
   input.gapTrigger=$('gapTrigger').value;input.p3Context=$('p3Context').value;
   currentDecision=E.evaluate(input);const d=currentDecision;
   $('openingContext').value=d.openingContext||'待分類（不符合有效Setup）';$('researchP').value=d.researchP||'';
@@ -151,12 +155,12 @@ async function saveRecord(ev){ev.preventDefault();update();const data=getInput()
   }
   if(old)records=records.map(r=>r.id===old.id?entry:r);else records.unshift(entry);
   if(!saveStore())return;
-  const chosen=Array.from($('screenshotInput').files||[]).filter(f=>f.type.startsWith('image/'));
-  if(chosen.length){try{await putImages(entry.id,chosen);entry.chartImageCount=(await getImages(entry.id)).length;saveStore();}catch(e){$('saveNotice').textContent='紀錄已存，但部分圖片未存成功：'+e.message;}}
-  $('saveNotice').textContent=`已儲存 ${entry.tradeDate||'無日期'} ${entry.product}｜${entry.status}｜Research Size ${numberText(entry.finalSize)}`;
+  const chosen=pendingImages.slice();let imageError='';
+  if(chosen.length){try{await putImages(entry.id,chosen);entry.chartImageCount=(await getImages(entry.id)).length;saveStore();pendingImages=[];}catch(e){imageError='；圖片儲存失敗，請重試：'+e.message;}}
+  $('saveNotice').textContent=`已儲存 ${entry.tradeDate||'無日期'} ${entry.product}｜${entry.status}｜Research Size ${numberText(entry.finalSize)}${imageError}`;
   editingId=entry.id;$('saveBtn').textContent='更新研究紀錄';$('screenshotInput').value='';renderImagePreviews(entry.id);renderHistory();renderStats();
 }
-function resetForm(){editingId=null;rfAuto=false;const form=$('tradeForm');form.reset();document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
+function resetForm(){editingId=null;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';const form=$('tradeForm');form.reset();document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
 function filterValues(id){return new Set(Array.from($(id).querySelectorAll('input:checked')).map(x=>x.value));}
 function multiMatch(set,value){return set.size===0||set.has(String(value??''));}
 function filteredRecords(){const from=$('filterFrom').value,to=$('filterTo').value;const f={};
@@ -235,10 +239,34 @@ async function getImages(recordId){const db=await openDB();try{return await new 
 async function deleteImages(recordId){const db=await openDB();try{await new Promise((resolve,reject)=>{const tx=db.transaction(IMAGE_TABLE,'readwrite');const index=tx.objectStore(IMAGE_TABLE).index('recordId');const cursor=index.openCursor(recordId);cursor.onsuccess=()=>{const c=cursor.result;if(c){c.delete();c.continue();}};tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
 function clearImageObjectURLs(){existingPreviewURLs.forEach(u=>URL.revokeObjectURL(u));existingPreviewURLs=[];}
 function clearImagePreviews(){clearImageObjectURLs();$('imagePreview').innerHTML='';}
-function previewNewImages(){renderImagePreviews(editingId);}
+function addPendingImages(files,origin){
+  const images=Array.from(files||[]).filter(f=>f&&String(f.type||'').startsWith('image/'));
+  if(!images.length){$('pasteNotice').textContent='未發現圖片。請先複製截圖，再按 Ctrl+V / ⌘+V。';return false;}
+  for(const f of images){const ext=(f.type.split('/')[1]||'png').replace(/[^a-z0-9]/gi,'').slice(0,8)||'png';
+    pendingImages.push(new File([f],`breakout-${origin}-${Date.now()}-${pendingImages.length+1}.${ext}`,{type:f.type,lastModified:Date.now()}));}
+  $('pasteNotice').textContent=`已新增 ${images.length} 張${origin==='paste'?'貼上':origin==='drop'?'拖放':'上傳'}圖片；目前有 ${pendingImages.length} 張待儲存。按「儲存研究紀錄」後才會寫入。`;
+  renderImagePreviews(editingId);return true;
+}
+function onScreenshotSelect(e){addPendingImages(e.target.files,'upload');e.target.value='';}
+function onScreenshotPaste(e){
+  const dt=e.clipboardData;if(!dt)return;
+  const fromItems=Array.from(dt.items||[]).filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile()).filter(Boolean);
+  const images=fromItems.length?fromItems:Array.from(dt.files||[]).filter(f=>f.type.startsWith('image/'));
+  if(images.length){e.preventDefault();addPendingImages(images,'paste');}
+}
+async function readClipboardImages(){
+  if(!navigator.clipboard?.read){$('pasteNotice').textContent='呢個瀏覽器唔支援按鈕讀取剪貼簿；請點擊上方貼圖區再按 Ctrl+V / ⌘+V。';$('pasteZone').focus();return;}
+  try{const items=await navigator.clipboard.read(),images=[];
+    for(const item of items){for(const type of item.types.filter(t=>t.startsWith('image/'))){images.push(await item.getType(type));}}
+    addPendingImages(images,'paste');
+  }catch(e){$('pasteNotice').textContent='無法讀取剪貼簿（可能未授權）。請點擊貼圖區再按 Ctrl+V / ⌘+V。';$('pasteZone').focus();}
+}
+function onScreenshotDrop(e){e.preventDefault();$('pasteZone').classList.remove('drag-active');addPendingImages(e.dataTransfer?.files,'drop');}
 async function renderImagePreviews(recordId){clearImagePreviews();if(recordId){try{const files=await getImages(recordId);for(const photo of files){const url=URL.createObjectURL(photo.blob);existingPreviewURLs.push(url);addPreview(url,photo.name,'已儲存');}}catch{}}
-Array.from($('screenshotInput').files||[]).forEach(f=>{const url=URL.createObjectURL(f);existingPreviewURLs.push(url);addPreview(url,f.name,'待儲存');});}
-function addPreview(url,name,state){const box=document.createElement('div');box.className='preview-item';const im=document.createElement('img');im.src=url;im.alt=name;const label=document.createElement('small');label.textContent=state;box.append(im,label);$('imagePreview').append(box);}
+for(const [idx,file] of pendingImages.entries()){const url=URL.createObjectURL(file);existingPreviewURLs.push(url);addPreview(url,file.name,'待儲存',idx);}}
+function addPreview(url,name,state,pendingIndex=null){const box=document.createElement('div');box.className='preview-item';const im=document.createElement('img');im.src=url;im.alt=name;const label=document.createElement('small');label.textContent=state;box.append(im,label);
+if(pendingIndex!==null){const remove=document.createElement('button');remove.type='button';remove.className='secondary-btn mini-button';remove.textContent='移除待儲存圖片';remove.dataset.removePending=String(pendingIndex);box.append(remove);}
+$('imagePreview').append(box);}
 // Native ZIP (store mode) for offline screenshot backup. Images are not embedded in CSV.
 function crc32(bytes){let c=-1;for(const b of bytes){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xEDB88320:0);}return(c^(-1))>>>0;}
 function concatBytes(parts){const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let off=0;for(const p of parts){out.set(p,off);off+=p.length;}return out;}
