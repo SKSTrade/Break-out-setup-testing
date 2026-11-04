@@ -1665,3 +1665,95 @@ dialog::backdrop {
 .decision-history-details{margin:20px 0;border-radius:12px;border:1px solid var(--border);padding:12px}
 .decision-history-details>summary{cursor:pointer;font-weight:800;color:var(--accent)}
 @media(max-width:520px){.decision-summary{gap:5px}.decision-summary>div{padding:9px}.decision-summary strong{font-size:.9rem}.decision-summary small{font-size:.62rem}.decision-group .result-lines>div{grid-template-columns:minmax(100px,39%) minmax(0,1fr);padding:10px}.decision-group .result-lines strong{font-size:.8rem}.decision-final strong{font-size:1.28rem}}
+
+/* V0.1.5 • V1.30.35-inspired quick section navigation (UI only) */
+.jump-anchor { scroll-margin-top: 110px; }
+.quick-nav {
+  position: fixed;
+  z-index: 60;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  width: 160px;
+  max-height: min(72dvh, 620px);
+  overflow-y: auto;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--card) 96%, transparent);
+  box-shadow: 0 12px 32px rgba(0,0,0,.22);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+.quick-nav-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 4px 5px; color: var(--muted); font-size: .77rem; }
+.quick-nav button { cursor: pointer; color: var(--text); }
+.quick-nav-header button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 1.12rem;
+}
+.quick-nav > button[data-jump-target] {
+  min-height: 34px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font-size: .76rem;
+  font-weight: 700;
+  text-align: left;
+}
+.quick-nav > button[data-jump-target]:hover, .quick-nav > button[data-jump-target]:focus-visible,
+.quick-nav-header button:hover, .quick-nav-header button:focus-visible {
+  background: var(--panel);
+  border-color: var(--border);
+  outline-offset: 2px;
+}
+.quick-nav-toggle { display: none; }
+body:not(.calculator-active) .quick-nav,
+body:not(.calculator-active) .quick-nav-toggle { display: none !important; }
+@media (max-width: 1199px) {
+  .quick-nav {
+    top: auto;
+    bottom: calc(146px + env(safe-area-inset-bottom, 0px));
+    right: 12px;
+    transform: none;
+    display: none;
+    width: min(78vw, 218px);
+    max-height: min(62dvh, 490px);
+  }
+  .quick-nav.open { display: flex; }
+  .quick-nav-toggle {
+    display: inline-flex;
+    position: fixed;
+    z-index: 61;
+    right: 12px;
+    bottom: calc(91px + env(safe-area-inset-bottom, 0px));
+    justify-content: center;
+    align-items: center;
+    min-width: 67px;
+    min-height: 43px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--text);
+    font-size: .85rem;
+    font-weight: 800;
+    box-shadow: 0 10px 26px rgba(0,0,0,.25);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jump-anchor { scroll-behavior: auto; }
+}

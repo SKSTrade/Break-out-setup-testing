@@ -89,3 +89,10 @@
 - Entry TF預設：HSI、GER40 = 1M；EURUSD、GBPUSD、USDCHF、XAUUSD = 15M；切換商品時自動更新；編輯既有紀錄保留原TF。
 - 移除RR、Clean Expansion Space數值欄位及其舊資料自動Veto；仍保留其他明示Hard Veto。新版CSV不輸出該兩欄，舊CSV仍可讀入，其舊RR/Space值不再參與size計算。
 - 此版本維持舊研究資料鍵值、研究版本與獨立儲存，不會修改Master Trade。
+
+
+## V0.1.5｜右側快速跳轉（純介面更新）
+
+參考 Master Trade V1.30.35：桌面寬螢幕右側固定快速跳轉面板，窄螢幕／手機以「章節 ↑」按鈕展開。可直接跳往「紀錄／產品、Market State、Location／Q、Breakout／Retest、Risk／Sizing、完整判斷、結果／儲存」或返回頂部。
+
+使用平滑捲動及適當 header offset；支援 Escape、按外側關閉；切換到紀錄庫／研究統計／研究規則頁會隱藏。只新增 section DOM id／CSS／navigation listeners，不改 sizing engine、Research V0.1 規則、CSV schema、localStorage 或 IndexedDB。
