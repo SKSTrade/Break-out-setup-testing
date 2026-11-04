@@ -106,3 +106,9 @@
 - 成功儲存相片後會清除畫面預覽，但舊紀錄相片仍保存在其 Record ID 下；從紀錄庫編輯仍可正常更新原紀錄。
 - 如果圖片儲存失敗，文字記錄已完成時保留原ID及待上傳圖片作重試，避免產生重複紀錄。
 - 研究計算規則、數據儲存key、CSV schema、Master Trade V1.30.35均不變。
+
+
+## V0.1.7｜紀錄庫截圖放大＋Invalid觀察保留
+- 紀錄庫詳情內截圖可點擊放大，支援上一張／下一張、鍵盤左右鍵及 Esc 關閉。
+- Valid 0-size Setup 照舊保留完整 hypothetical result，Research Actual R = 0。
+- Invalid / Skipped 不再刪除手動輸入嘅 Normalized R、MFE、MAE、RF、TP2 等研究觀察；Research Actual R 保持 N/A，而且所有正式績效、0注 cohort 及分組統計仍然排除 Invalid / Skipped。

@@ -45,6 +45,7 @@ const CSV_KEYS=[...new Set(['id','createdAt','updatedAt','project','version','mo
   'baseSize','validSetup','hardVeto','finalSize','executable','status','skipReason','normalizedR','actualR','mfeR','maeR','reachedRF','timeToRF','tp2','deepRF','deepRFOriginalSL','deepRFShadowMfe','deepRFNoRF',
   'exitTimestamp','originalMatch','originalTradeId','notes','chartImageCount'])];
 let records=[];let editingId=null;let selectedIds=new Set();let currentDecision=null;let existingPreviewURLs=[];let rfAuto=false;let pendingImages=[];let isSaving=false;let imagePreviewGeneration=0;let awaitingNewTradeInput=false;
+let detailImageURLs=[];let lightboxIndex=0;
 const escapeHtml=(v)=>String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const numberText=(v)=>v===null||v===undefined||v===''?'—':Number(v).toFixed(2);
 const safeString=(v)=>String(v??'');
@@ -104,7 +105,14 @@ function init(){
   $('quickNavToggle').addEventListener('click',()=>setQuickNavOpen(!$('researchQuickNav').classList.contains('open')));
   $('quickNavClose').addEventListener('click',()=>setQuickNavOpen(false));
   $('researchQuickNav').addEventListener('click',event=>{const button=event.target.closest('[data-jump-target]');if(button)jumpToResearchSection(button.dataset.jumpTarget);});
-  document.addEventListener('keydown',event=>{if(event.key==='Escape')setQuickNavOpen(false);});
+  document.addEventListener('keydown',event=>{
+    if(!$('imageLightbox')?.classList.contains('hidden')){
+      if(event.key==='Escape'){closeImageLightbox();return;}
+      if(event.key==='ArrowLeft'){stepImageLightbox(-1);return;}
+      if(event.key==='ArrowRight'){stepImageLightbox(1);return;}
+    }
+    if(event.key==='Escape')setQuickNavOpen(false);
+  });
   document.addEventListener('pointerdown',event=>{
     if(!$('researchQuickNav').classList.contains('open'))return;
     if(!$('researchQuickNav').contains(event.target)&&!$('quickNavToggle').contains(event.target))setQuickNavOpen(false);
@@ -120,6 +128,7 @@ function init(){
   $('exportImageZip').addEventListener('click',exportSelectedImages);
   $('importBtn').addEventListener('click',()=>$('csvImport').click());$('csvImport').addEventListener('change',importCSV);
   $('closeDialog').addEventListener('click',closeDialog);$('dialogOverlay').addEventListener('click',(e)=>{if(e.target===$('dialogOverlay'))closeDialog();});
+  $('closeImageLightbox').addEventListener('click',closeImageLightbox);$('imageLightbox').addEventListener('click',(e)=>{if(e.target===$('imageLightbox'))closeImageLightbox();});$('lightboxPrev').addEventListener('click',()=>stepImageLightbox(-1));$('lightboxNext').addEventListener('click',()=>stepImageLightbox(1));
   update();renderHistory();renderStats();
   if('serviceWorker' in navigator && location.protocol!=='file:')navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
 }
@@ -273,9 +282,10 @@ async function saveRecord(ev){
     entry.maeR=E.toNumber(data.maeR);
     entry.chartImageCount=old?.chartImageCount||0;
     if(entry.validSetup==='No'){
-      // Invalid setup cannot be included in hypothetical trade statistics.
-      entry.normalizedR=null;entry.mfeR=null;entry.maeR=null;entry.actualR=null;entry.tp2='';
-      entry.reachedRF='No';entry.timeToRF=null;entry.deepRF='No';entry.deepRFOriginalSL='';entry.deepRFShadowMfe='';entry.deepRFNoRF='';
+      // Keep manually entered research observations for audit / selection-bias study,
+      // but an invalid setup is never an executable trade and is excluded from all performance stats.
+      // Research Actual R therefore stays N/A even when a hypothetical Normalized R was entered.
+      entry.actualR=null;
     }
     const previousRecords=records;
     if(old)records=records.map(r=>r.id===old.id?entry:r);
@@ -335,11 +345,15 @@ const show=['mode','breakoutSession','bheCompletedSession','entrySession','conti
  'bheValid','firstRetestValid','retestAcceptance','retestInternal','retestVsReclaim','entryMainStructure','entryWorkingStructure','baseSize','finalSize','validSetup','status','skipReason','reachedRF','timeToRF','tp2','deepRF','normalizedR','actualR','mfeR','maeR','originalTradeId','notes'];
 $('dialogContent').innerHTML='<div class="detail-grid">'+show.map(k=>`<div><span class="muted">${escapeHtml(COLUMN_LABELS[k]||k)}</span><strong>${escapeHtml(k==='timeToRF'?E.durationText(record[k]):Array.isArray(record[k])?record[k].join('+'):record[k]??'—')}</strong></div>`).join('')+'</div><details class="decision-history-details"><summary>All-Market Master Trade Matrix｜完整判斷（儲存資料重算）</summary><div id="dialogJudgment"></div></details><div id="dialogImages" class="image-preview"></div>';
 const snap=normalizeLegacySessionFields(record);const explanation=J.build(snap,E.evaluate(snap));$('dialogJudgment').innerHTML=decisionMarkup(explanation)+'<div class="decision-final"><span>Final Research Size</span><strong>'+escapeHtml(numberText(explanation.finalSize))+' 注</strong></div><div class="decision-explanations"><ol>'+explanation.explanations.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ol></div>';
-$('dialogOverlay').classList.remove('hidden');try{const images=await getImages(record.id);const root=$('dialogImages');images.forEach(item=>{const url=URL.createObjectURL(item.blob);existingPreviewURLs.push(url);const im=document.createElement('img');im.src=url;im.alt=item.name;root.appendChild(im);});}catch{}
+$('dialogOverlay').classList.remove('hidden');try{const images=await getImages(record.id);const root=$('dialogImages');detailImageURLs=[];images.forEach((item,index)=>{const url=URL.createObjectURL(item.blob);existingPreviewURLs.push(url);detailImageURLs.push({url,name:item.name||`Screenshot ${index+1}`});const im=document.createElement('img');im.src=url;im.alt=item.name;im.className='detail-thumb';im.tabIndex=0;im.setAttribute('role','button');im.setAttribute('aria-label',`放大圖片 ${index+1}`);im.addEventListener('click',()=>openImageLightbox(index));im.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openImageLightbox(index);}});root.appendChild(im);});}catch{}
 }
-function closeDialog(){$('dialogOverlay').classList.add('hidden');$('dialogContent').innerHTML='';clearImageObjectURLs();}
+function openImageLightbox(index){if(!detailImageURLs.length)return;lightboxIndex=Math.max(0,Math.min(index,detailImageURLs.length-1));renderImageLightbox();$('imageLightbox').classList.remove('hidden');document.body.classList.add('lightbox-open');}
+function renderImageLightbox(){const item=detailImageURLs[lightboxIndex];if(!item)return;$('lightboxImage').src=item.url;$('lightboxImage').alt=item.name;$('lightboxCaption').textContent=`${lightboxIndex+1} / ${detailImageURLs.length} · ${item.name}`;const many=detailImageURLs.length>1;$('lightboxPrev').classList.toggle('hidden',!many);$('lightboxNext').classList.toggle('hidden',!many);}
+function stepImageLightbox(delta){if(detailImageURLs.length<2)return;lightboxIndex=(lightboxIndex+delta+detailImageURLs.length)%detailImageURLs.length;renderImageLightbox();}
+function closeImageLightbox(){$('imageLightbox').classList.add('hidden');$('lightboxImage').removeAttribute('src');document.body.classList.remove('lightbox-open');}
+function closeDialog(){closeImageLightbox();$('dialogOverlay').classList.add('hidden');$('dialogContent').innerHTML='';detailImageURLs=[];clearImageObjectURLs();}
 function csvQuote(v){const value=Array.isArray(v)?v.join('+'):(v===null||v===undefined?'':String(v));return /[",\r\n]/.test(value)?'"'+value.replace(/"/g,'""')+'"':value;}
-function filename(kind,ext){return `BreakoutResearch-V0.1.6-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
+function filename(kind,ext){return `BreakoutResearch-V0.1.7-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
 function downloadBlob(blob,name){const link=document.createElement('a');const url=URL.createObjectURL(blob);link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}
 function exportCSV(items,kind){if(!items.length){alert('沒有紀錄可匯出。');return;}const headers=CSV_KEYS.map(k=>COLUMN_LABELS[k]||k);const lines=[headers.map(csvQuote).join(',')];for(const item of items){const source=normalizeLegacySessionFields(item);const values=CSV_KEYS.map(key=>{let v=source[key];if(key==='timeToRF')v=v!==null&&v!==undefined&&v!==''?E.durationText(v):'';if(BOOLEAN_IDS.has(key))v=v?'Yes':'No';return csvQuote(v);});lines.push(values.join(','));}
 downloadBlob(new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),filename(kind,'csv'));}
@@ -358,8 +372,8 @@ async function importCSV(ev){const file=ev.target.files?.[0];if(!file)return;con
  const item={...rawItem,...evalResult,id:key,createdAt:rawItem.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),mode:['Live','Practice','Review'].includes(rawItem.mode)?rawItem.mode:'Practice',
    normalizedR:E.toNumber(rawItem.normalizedR),mfeR:E.toNumber(rawItem.mfeR),maeR:E.toNumber(rawItem.maeR),chartImageCount:original>=0?records[original].chartImageCount:0};
  if(item.validSetup==='No'){
-   item.normalizedR=null;item.mfeR=null;item.maeR=null;item.actualR=null;item.tp2='';
-   item.reachedRF='No';item.timeToRF=null;item.deepRF='No';item.deepRFOriginalSL='';item.deepRFShadowMfe='';item.deepRFNoRF='';
+   // Preserve imported research observations, but keep invalid setups out of executable P&L.
+   item.actualR=null;
  }
  if(original>=0){records[original]=item;updated++;}else{records.unshift(item);added++;}
  }
@@ -381,7 +395,7 @@ const zero=records.filter(r=>r.status==='Valid 0-size Setup');const invalid=reco
 const tiles=[['正式研究Entry',s.n],['有效0注Setup',zero.length],['無效／Skip',invalid.length],['Review（不計績效）',review.length],['Normalized E',s.expectancy===null?'—':numberText(s.expectancy)+'R'],['Actual R',numberText(s.actual)+'R'],['Win Rate',s.results?s.winrate.toFixed(1)+'%':'—'],['Loss Frequency',s.results?s.lossrate.toFixed(1)+'%':'—'],['Profit Factor',typeof s.pf==='number'?s.pf.toFixed(2):s.pf],['Max DD',s.dd.toFixed(2)+'R'],['Max Losing Streak',s.maxStreak],['RF Hit / All',`${s.rf}/${s.n}`],['TP2 Hit / All',`${s.tp2}/${s.n}`],['2R Hit / MFE有效',`${s.twoRHit}/${s.mfeN}`],['Avg MFE',s.mfeAvg===null?'—':numberText(s.mfeAvg)+'R'],['Avg MAE',s.maeAvg===null?'—':numberText(s.maeAvg)+'R'],['Avg Time to RF',s.rfTimeAvg===null?'—':E.durationText(Math.round(s.rfTimeAvg))]];
 $('statsCards').innerHTML=tiles.map(([label,value])=>`<div class="stat-card"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></div>`).join('');
 const zeroResearch=zero.filter(r=>['Live','Practice'].includes(r.mode));const zeroAvg=zeroResearch.map(r=>E.toNumber(r.normalizedR)).filter(x=>x!==null);const avg=zeroAvg.length?numberText(zeroAvg.reduce((a,b)=>a+b,0)/zeroAvg.length):'—';
-let html=`<p class="state-note">有效0注：共 ${zero.length} 筆，當中Live/Practice ${zeroResearch.length} 筆，其中 ${zeroAvg.length} 筆有Hypothetical R，平均Normalized=${avg}R；Research Actual R全部0，唔計主績效。</p>`;
+let html=`<p class="state-note">有效0注：共 ${zero.length} 筆，當中Live/Practice ${zeroResearch.length} 筆，其中 ${zeroAvg.length} 筆有Hypothetical R，平均Normalized=${avg}R；Research Actual R全部0，唔計主績效。</p><p class="state-note">Invalid / Skipped 可以保留你手動輸入嘅 R、MFE、MAE、RF 等研究觀察，但 <strong>全部排除主績效、0注 cohort 同分組統計</strong>，只供之後檢查 selection bias／資料輸入錯誤。</p>`;
 // New FX/XAU cross-session research: London Entry vs NY Entry, BHE completed in London vs NY.
 // Numerators use only observed MFE / time samples; Review and zero-size remain outside main performance.
 const median=values=>{if(!values.length)return null;const arr=[...values].sort((a,b)=>a-b);const i=Math.floor(arr.length/2);return arr.length%2?arr[i]:(arr[i-1]+arr[i])/2;};
