@@ -1,34 +1,36 @@
 (() => {
 'use strict';
 const E=window.BreakoutEngine;
+const J=window.BreakoutJudgment;
+if(!J)throw new Error('Missing BreakoutJudgment');
 if(!E) throw new Error('Missing BreakoutEngine');
 const $=(id)=>document.getElementById(id);
 const STORE='breakoutResearchV01Records';
 const IMAGE_DB='breakoutResearchV01Images';
 const IMAGE_TABLE='photos';
 const INPUTS=[
-  'tradeDate','product','referenceRange','breakoutSession','preOpenDirection','entryTF','mainTF','mainState','mainT0Subtype','secondaryTF','officialState','officialT0Subtype','gapMode','gapTrigger','workingState','workingT0Subtype',
-  'rawP','p3Context','nativeQ','rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','firstRetestValid','retestInSession',
+  'tradeDate','product','referenceRange','breakoutSession','bheCompletedSession','entrySession','preOpenDirection','entryTF','mainTF','mainState','mainT0Subtype','secondaryTF','officialState','officialT0Subtype','gapMode','gapTrigger','workingState','workingT0Subtype',
+  'rawP','p3Context','nativeQ','rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','firstRetestValid','retestInSession','entryInSession','londonBreakoutIntact','priorRetestOccurred','nyRebreak',
   'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','rr','cleanSpaceR',
   'lateEntry','invalidExecution','htfObstacle','manualVeto','riskNote','normalizedR','mfeR','maeR','reachedRF','timeToRF','deepRF','deepRFOriginalSL',
   'deepRFShadowMfe','deepRFNoRF','exitTimestamp','originalTradeId','originalMatch','notes'
 ];
 const CALC_FIELDS=[
-  'project','version','family','referenceRange','breakoutSession','source','effectiveSecondary','gapQualified','directionPermission','openingContext',
+  'project','version','family','referenceRange','breakoutSession','bheCompletedSession','entrySession','continuationValid','source','effectiveSecondary','gapQualified','directionPermission','openingContext',
   'researchP','bheValid','sessionValid','baseSize','validSetup','hardVeto','finalSize','executable','status','skipReason','actualR','tp2'
 ];
-const BOOLEAN_IDS=new Set(['rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','firstRetestValid','retestInSession','lateEntry','invalidExecution','htfObstacle','manualVeto','originalMatch']);
+const BOOLEAN_IDS=new Set(['rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','firstRetestValid','retestInSession','entryInSession','londonBreakoutIntact','priorRetestOccurred','nyRebreak','lateEntry','invalidExecution','htfObstacle','manualVeto','originalMatch']);
 const COLUMN_LABELS={
   id:'Record ID',createdAt:'Created At',updatedAt:'Updated At',mode:'類型',tradeDirection:'交易方向',q2Subtypes:'Q2 Subtype',
   project:'Project Name',version:'Research Version',family:'Setup Family',source:'Secondary Judge Source',effectiveSecondary:'Effective Secondary Market State',
   directionPermission:'Direction Permission',openingContext:'Opening Context',researchP:'Research P',bheValid:'BHE Valid',sessionValid:'Session Valid',
   baseSize:'Base Research Size',finalSize:'Final Research Size',validSetup:'Valid Setup',hardVeto:'Hard Veto',executable:'Executable Candidate',
   status:'Entry／Skip Category',skipReason:'Skip Reason',actualR:'Research Actual R',tp2:'去唔去到TP2 Auto',
-  tradeDate:'Trade Date',product:'Product',referenceRange:'Reference Range',breakoutSession:'Breakout Session',preOpenDirection:'Pre-open Direction',
+  tradeDate:'Trade Date',product:'Product',referenceRange:'Reference Range',breakoutSession:'Breakout Session',bheCompletedSession:'BHE Completed Session',entrySession:'Entry Session',continuationValid:'Original Breakout Continuation Valid',preOpenDirection:'Pre-open Direction',
   entryTF:'Entry TF',mainTF:'Main Judge TF',mainState:'Main Judge Market State',mainT0Subtype:'Main T0 Subtype',secondaryTF:'Secondary TF',
   officialState:'Secondary Official Market State',officialT0Subtype:'Secondary Official T0 Subtype',gapMode:'Structural Gap',gapTrigger:'Structural Gap Trigger',workingState:'Secondary Working Market State',workingT0Subtype:'Secondary Working T0 Subtype',
   rawP:'Raw P',p3Context:'P3 Context',nativeQ:'Native Q',rangeEstablished:'Reference Range Established',breakoutSessionValid:'Breakout In Session',
-  breakConfirmed:'Break Confirmed',holdConfirmed:'Hold Confirmed',extendConfirmed:'Extend Confirmed',firstRetestValid:'First Valid Retest',retestInSession:'First Retest In Session',
+  breakConfirmed:'Break Confirmed',holdConfirmed:'Hold Confirmed',extendConfirmed:'Extend Confirmed',firstRetestValid:'First Valid Retest',retestInSession:'First Retest In Allowed Session',entryInSession:'Entry In Allowed Session',londonBreakoutIntact:'Original London Breakout Intact',priorRetestOccurred:'Earlier Retest Occurred',nyRebreak:'NY Independent Rebreak',
   retestAcceptance:'Retest Acceptance',retestInternal:'Retest Internal Structure',
   retestVsReclaim:'Retest vs Reclaim Structure',bheToRetest:'BHE to First Retest H/M',entryMainStructure:'Entry-TF Main Structure',entryWorkingStructure:'Entry-TF Working Structure',
   rr:'RR',cleanSpaceR:'Clean Expansion Space R',lateEntry:'Late Entry',invalidExecution:'Execution Invalid',htfObstacle:'Hard HTF Obstacle',manualVeto:'Other Hard Veto',riskNote:'Risk Note',
@@ -36,9 +38,9 @@ const COLUMN_LABELS={
   deepRFOriginalSL:'Deep-RF Original SL Hit',deepRFShadowMfe:'Deep-RF Shadow MFE R',deepRFNoRF:'Deep-RF No RF Final R',
   exitTimestamp:'Exit Timestamp',originalTradeId:'Original Trade ID',originalMatch:'Original Journal Match',notes:'Notes',chartImageCount:'Local Screenshot Count'
 };
-const CSV_KEYS=[...new Set(['id','createdAt','updatedAt','project','version','mode','tradeDate','product','family','referenceRange','breakoutSession','tradeDirection','preOpenDirection','openingContext',
+const CSV_KEYS=[...new Set(['id','createdAt','updatedAt','project','version','mode','tradeDate','product','family','referenceRange','breakoutSession','bheCompletedSession','entrySession','continuationValid','tradeDirection','preOpenDirection','openingContext',
   'entryTF','mainTF','mainState','mainT0Subtype','secondaryTF','officialState','officialT0Subtype','gapMode','gapTrigger','workingState','workingT0Subtype','source','effectiveSecondary','directionPermission','rawP','p3Context','researchP','nativeQ','q2Subtypes',
-  'rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','bheValid','firstRetestValid','retestInSession',
+  'rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','bheValid','firstRetestValid','retestInSession','entryInSession','londonBreakoutIntact','priorRetestOccurred','nyRebreak',
   'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','rr','cleanSpaceR','lateEntry','invalidExecution','htfObstacle','manualVeto','riskNote',
   'baseSize','validSetup','hardVeto','finalSize','executable','status','skipReason','normalizedR','actualR','mfeR','maeR','reachedRF','timeToRF','tp2','deepRF','deepRFOriginalSL','deepRFShadowMfe','deepRFNoRF',
   'exitTimestamp','originalMatch','originalTradeId','notes','chartImageCount'])];
@@ -58,6 +60,8 @@ function init(){
   const setupFilter=(id,items)=>{ $(id).innerHTML=items.map(([val,label])=>`<label><input type="checkbox" value="${escapeHtml(val)}"><span>${escapeHtml(label)}</span></label>`).join('');};
   setupFilter('filterMode',[['Live','Live'],['Practice','Practice'],['Review','Review']]);
   setupFilter('filterProduct',Object.keys(E.PRODUCTS).map(p=>[p,p]));
+  setupFilter('filterEntrySession',[['London','London'],['New York','New York'],['HSI Opening Session','HSI Opening'],['GER40 European Opening Session','GER40 Opening']]);
+  setupFilter('filterBHESession',[['London','London'],['New York','New York'],['HSI Opening Session','HSI Opening'],['GER40 European Opening Session','GER40 Opening']]);
   setupFilter('filterOpening',[['順向順勢','順向'],['反向順勢','反向'],['','未分類']]);
   setupFilter('filterSize',E.SIZES.map(n=>[String(n),String(n)]));
   setupFilter('filterP',['P1','P2','P3','P4'].map(x=>[x,x]));
@@ -114,17 +118,57 @@ function getInput(){
   data.q2Subtypes=Array.from(document.querySelectorAll('#q2SubtypeChoices input:checked')).map(i=>i.value);
   return data;
 }
+function normalizeLegacySessionFields(record){
+  const fx=E.isFxXau(record.product);const native=E.PRODUCTS[record.product]?.session||'';
+  return {...record,
+    bheCompletedSession:record.bheCompletedSession??(fx?'London':native),
+    entrySession:record.entrySession??(fx?'London':native),
+    // Old V0.1.1 data only allowed London entry; preserve the frozen original decision.
+    entryInSession:record.entryInSession??true,
+    londonBreakoutIntact:record.londonBreakoutIntact??true,
+    priorRetestOccurred:record.priorRetestOccurred??false,
+    nyRebreak:record.nyRebreak??false};
+}
+function setSessionOptions(productId){
+  const fx=E.isFxXau(productId);const native=E.PRODUCTS[productId]?.session||'';
+  $('fxContinuationPanel').classList.toggle('hidden',!fx);
+  for(const id of ['bheCompletedSession','entrySession']){
+    const sel=$(id),previous=sel.value;
+    const options=fx?[['','未選擇'],['London','London'],['New York','New York']]:[[native,native]];
+    const key=options.map(([v,label])=>`<option value="${v}">${label}</option>`).join('');
+    if(sel.dataset.product!==productId){sel.innerHTML=key;sel.dataset.product=productId;sel.value=options.some(([v])=>v===previous)?previous:(fx?'':native);}
+    sel.disabled=!fx;
+  }
+}
 function fillForm(record){
-  for(const id of INPUTS){const el=$(id);if(!el)continue;const value=record[id];if(BOOLEAN_IDS.has(id))el.checked=value===true||value==='Yes'||value==='true';else if(id!=='referenceRange'&&id!=='breakoutSession')el.value=value===null||value===undefined?'':String(value);}
+  const restored=normalizeLegacySessionFields(record);setSessionOptions(restored.product);
+  for(const id of INPUTS){const el=$(id);if(!el)continue;const value=restored[id];if(BOOLEAN_IDS.has(id))el.checked=value===true||value==='Yes'||value==='true';else if(id!=='referenceRange'&&id!=='breakoutSession')el.value=value===null||value===undefined?'':String(value);}
   document.querySelectorAll('input[name="mode"]').forEach(x=>x.checked=x.value===record.mode);
   document.querySelectorAll('input[name="direction"]').forEach(x=>x.checked=x.value===record.tradeDirection);
   document.querySelectorAll('#q2SubtypeChoices input').forEach(x=>x.checked=(record.q2Subtypes||[]).includes(x.value));
   pendingImages=[];$('screenshotInput').value='';$('pasteNotice').textContent='可貼上更多圖片；新圖片會喺更新紀錄時儲存。';editingId=record.id;rfAuto=Boolean(record.timeToRF);$('saveBtn').textContent='更新研究紀錄';
   $('saveNotice').textContent=`編輯中：${record.tradeDate} ${record.product} · ${record.id}`;update();renderImagePreviews(record.id);
 }
+function decisionMarkup(summary){
+  const escape=escapeHtml;
+  return summary.sections.map(section=>`<section class="decision-group"><h3>${escape(section.title)}</h3><div class="result-lines">${section.rows.map(([key,value])=>`<div><span>${escape(key)}</span><strong>${escape(value??'—')}</strong></div>`).join('')}</div></section>`).join('');
+}
+function renderFullDecision(input,decision){
+  const summary=J.build(input,decision);
+  $('decisionPermissionSummary').textContent=decision.directionPermission;
+  $('decisionValidSummary').textContent=decision.validSetup;
+  $('decisionExecutableSummary').textContent=decision.executable;
+  $('fullDecisionSections').innerHTML=decisionMarkup(summary);
+  $('fullDecisionFinal').textContent=numberText(decision.finalSize)+' 注';
+  $('fullDecisionExplanations').innerHTML='<ol>'+summary.explanations.map(x=>`<li>${escapeHtml(x)}</li>`).join('')+'</ol>';
+  $('rbDecisionResult').dataset.status=decision.status;
+}
 function update(){
   const input=getInput();const product=E.PRODUCTS[input.product];
   $('referenceRange').value=product?.reference||'';$('breakoutSession').value=product?.session||'';
+  setSessionOptions(input.product);
+  // Product switch can replace session selectors; use the actual current selector values.
+  input.bheCompletedSession=$('bheCompletedSession').value;input.entrySession=$('entrySession').value;
   $('workingPanel').classList.toggle('hidden',input.gapMode!=='on');$('gapTrigger').disabled=input.gapMode!=='on';if(input.gapMode!=='on')$('gapTrigger').value='';
   for(const [stateField,subtypeField] of [['mainState','mainT0Subtype'],['officialState','officialT0Subtype'],['workingState','workingT0Subtype']]){const sub=$(subtypeField);sub.disabled=$(stateField).value!=='t0';if(sub.disabled)sub.value='';}
   $('p3Context').disabled=input.rawP!=='P3';if(input.rawP!=='P3')$('p3Context').value='';
@@ -138,6 +182,7 @@ function update(){
   $('directionPermissionView').textContent=d.directionPermission;$('bheView').textContent=d.bheValid;$('validSetupView').textContent=d.validSetup;
   $('baseSizeView').textContent=numberText(d.baseSize);$('finalSizeView').textContent=numberText(d.finalSize);$('executableView').textContent=d.executable;
   $('actualR').value=d.actualR===null?'':numberText(d.actualR);$('tp2View').value=d.tp2||'尚未輸入MFE';
+  renderFullDecision(input,d);
   $('statusBox').className='status-box '+(d.status==='Executable Entry'?'good':d.status==='Valid 0-size Setup'?'caution':'bad');
   $('statusBox').textContent=d.status==='Executable Entry'?'EXECUTABLE ENTRY｜完整Setup，注碼 '+numberText(d.finalSize):d.status==='Valid 0-size Setup'?'VALID 0-SIZE｜完整Setup，仍可記Hypothetical Result':'INVALID / SKIP｜保留Skip Reason，不計正式績效';
   $('skipReasonView').textContent=d.skipReason?`原因：${d.skipReason}`:'已符合所有自動驗證項目；具體Price Action仍需交易者判斷。';
@@ -160,12 +205,12 @@ async function saveRecord(ev){ev.preventDefault();update();const data=getInput()
   $('saveNotice').textContent=`已儲存 ${entry.tradeDate||'無日期'} ${entry.product}｜${entry.status}｜Research Size ${numberText(entry.finalSize)}${imageError}`;
   editingId=entry.id;$('saveBtn').textContent='更新研究紀錄';$('screenshotInput').value='';renderImagePreviews(entry.id);renderHistory();renderStats();
 }
-function resetForm(){editingId=null;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';const form=$('tradeForm');form.reset();document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
+function resetForm(){editingId=null;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';  const form=$('tradeForm');form.reset();delete $('bheCompletedSession').dataset.product;delete $('entrySession').dataset.product;document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
 function filterValues(id){return new Set(Array.from($(id).querySelectorAll('input:checked')).map(x=>x.value));}
 function multiMatch(set,value){return set.size===0||set.has(String(value??''));}
 function filteredRecords(){const from=$('filterFrom').value,to=$('filterTo').value;const f={};
-for(const name of ['Mode','Product','Opening','Size','P','P3','Q','Main','Secondary','Outcome','RF','TP2','EntryMain','EntryWorking','Retest'])f[name]=filterValues('filter'+name);
-return records.filter(r=>(!from||r.tradeDate>=from)&&(!to||r.tradeDate<=to)&&multiMatch(f.Mode,r.mode)&&multiMatch(f.Product,r.product)&&multiMatch(f.Opening,r.openingContext)&&multiMatch(f.Size,r.finalSize)&&multiMatch(f.P,r.rawP)&&multiMatch(f.P3,r.p3Context)&&multiMatch(f.Q,r.nativeQ)&&multiMatch(f.Main,r.mainState)&&multiMatch(f.Secondary,r.effectiveSecondary)&&multiMatch(f.Outcome,r.status)&&multiMatch(f.RF,r.reachedRF)&&multiMatch(f.TP2,r.tp2)&&multiMatch(f.EntryMain,r.entryMainStructure)&&multiMatch(f.EntryWorking,r.entryWorkingStructure)&&multiMatch(f.Retest,r.retestVsReclaim));}
+for(const name of ['Mode','Product','EntrySession','BHESession','Opening','Size','P','P3','Q','Main','Secondary','Outcome','RF','TP2','EntryMain','EntryWorking','Retest'])f[name]=filterValues('filter'+name);
+return records.filter(r=>(!from||r.tradeDate>=from)&&(!to||r.tradeDate<=to)&&multiMatch(f.Mode,r.mode)&&multiMatch(f.Product,r.product)&&multiMatch(f.EntrySession,normalizeLegacySessionFields(r).entrySession)&&multiMatch(f.BHESession,normalizeLegacySessionFields(r).bheCompletedSession)&&multiMatch(f.Opening,r.openingContext)&&multiMatch(f.Size,r.finalSize)&&multiMatch(f.P,r.rawP)&&multiMatch(f.P3,r.p3Context)&&multiMatch(f.Q,r.nativeQ)&&multiMatch(f.Main,r.mainState)&&multiMatch(f.Secondary,r.effectiveSecondary)&&multiMatch(f.Outcome,r.status)&&multiMatch(f.RF,r.reachedRF)&&multiMatch(f.TP2,r.tp2)&&multiMatch(f.EntryMain,r.entryMainStructure)&&multiMatch(f.EntryWorking,r.entryWorkingStructure)&&multiMatch(f.Retest,r.retestVsReclaim));}
 function renderHistory(){const filtered=filteredRecords();$('filterCount').textContent=`顯示 ${filtered.length} / ${records.length} 筆`;$('selectionCount').textContent=`已勾選 ${selectedIds.size} 筆`;
 $('historyList').innerHTML=filtered.length?filtered.slice().sort((a,b)=>String(b.tradeDate).localeCompare(String(a.tradeDate))||String(b.updatedAt).localeCompare(String(a.updatedAt))).map(r=>{
 const badge=r.status==='Executable Entry'?'good':r.status==='Valid 0-size Setup'?'caution':'bad';
@@ -178,23 +223,27 @@ if(btn.dataset.action==='detail')showDetail(rec);
 if(btn.dataset.action==='delete'&&confirm(`確定刪除${rec.tradeDate} ${rec.product}紀錄？此操作無法復原。`)){records=records.filter(r=>r.id!==rec.id);selectedIds.delete(rec.id);saveStore();try{await deleteImages(rec.id);}catch{}renderHistory();renderStats();}
 }));
 }
-async function showDetail(record){$('dialogTitle').textContent=`${record.tradeDate} · ${record.product} ${record.tradeDirection}`;
-const show=['mode','openingContext','mainState','mainT0Subtype','officialState','officialT0Subtype','workingState','workingT0Subtype','gapMode','gapTrigger','source','effectiveSecondary','directionPermission','rawP','p3Context','nativeQ','q2Subtypes',
+async function showDetail(record){record=normalizeLegacySessionFields(record);$('dialogTitle').textContent=`${record.tradeDate} · ${record.product} ${record.tradeDirection}`;
+const show=['mode','breakoutSession','bheCompletedSession','entrySession','continuationValid','londonBreakoutIntact','priorRetestOccurred','nyRebreak','openingContext','mainState','mainT0Subtype','officialState','officialT0Subtype','workingState','workingT0Subtype','gapMode','gapTrigger','source','effectiveSecondary','directionPermission','rawP','p3Context','nativeQ','q2Subtypes',
  'bheValid','firstRetestValid','retestAcceptance','retestInternal','retestVsReclaim','entryMainStructure','entryWorkingStructure','baseSize','finalSize','validSetup','status','skipReason','reachedRF','timeToRF','tp2','deepRF','normalizedR','actualR','mfeR','maeR','originalTradeId','notes'];
-$('dialogContent').innerHTML='<div class="detail-grid">'+show.map(k=>`<div><span class="muted">${escapeHtml(COLUMN_LABELS[k]||k)}</span><strong>${escapeHtml(k==='timeToRF'?E.durationText(record[k]):Array.isArray(record[k])?record[k].join('+'):record[k]??'—')}</strong></div>`).join('')+'</div><div id="dialogImages" class="image-preview"></div>';
+$('dialogContent').innerHTML='<div class="detail-grid">'+show.map(k=>`<div><span class="muted">${escapeHtml(COLUMN_LABELS[k]||k)}</span><strong>${escapeHtml(k==='timeToRF'?E.durationText(record[k]):Array.isArray(record[k])?record[k].join('+'):record[k]??'—')}</strong></div>`).join('')+'</div><details class="decision-history-details"><summary>All-Market Master Trade Matrix｜完整判斷（儲存資料重算）</summary><div id="dialogJudgment"></div></details><div id="dialogImages" class="image-preview"></div>';
+const snap=normalizeLegacySessionFields(record);const explanation=J.build(snap,E.evaluate(snap));$('dialogJudgment').innerHTML=decisionMarkup(explanation)+'<div class="decision-final"><span>Final Research Size</span><strong>'+escapeHtml(numberText(explanation.finalSize))+' 注</strong></div><div class="decision-explanations"><ol>'+explanation.explanations.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ol></div>';
 $('dialogOverlay').classList.remove('hidden');try{const images=await getImages(record.id);const root=$('dialogImages');images.forEach(item=>{const url=URL.createObjectURL(item.blob);existingPreviewURLs.push(url);const im=document.createElement('img');im.src=url;im.alt=item.name;root.appendChild(im);});}catch{}
 }
 function closeDialog(){$('dialogOverlay').classList.add('hidden');$('dialogContent').innerHTML='';clearImageObjectURLs();}
 function csvQuote(v){const value=Array.isArray(v)?v.join('+'):(v===null||v===undefined?'':String(v));return /[",\r\n]/.test(value)?'"'+value.replace(/"/g,'""')+'"':value;}
-function filename(kind,ext){return `BreakoutResearch-V0.1-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
+function filename(kind,ext){return `BreakoutResearch-V0.1.3-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
 function downloadBlob(blob,name){const link=document.createElement('a');const url=URL.createObjectURL(blob);link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}
-function exportCSV(items,kind){if(!items.length){alert('沒有紀錄可匯出。');return;}const headers=CSV_KEYS.map(k=>COLUMN_LABELS[k]||k);const lines=[headers.map(csvQuote).join(',')];for(const item of items){const values=CSV_KEYS.map(key=>{let v=item[key];if(key==='timeToRF')v=v!==null&&v!==undefined&&v!==''?E.durationText(v):'';if(BOOLEAN_IDS.has(key))v=v?'Yes':'No';return csvQuote(v);});lines.push(values.join(','));}
+function exportCSV(items,kind){if(!items.length){alert('沒有紀錄可匯出。');return;}const headers=CSV_KEYS.map(k=>COLUMN_LABELS[k]||k);const lines=[headers.map(csvQuote).join(',')];for(const item of items){const source=normalizeLegacySessionFields(item);const values=CSV_KEYS.map(key=>{let v=source[key];if(key==='timeToRF')v=v!==null&&v!==undefined&&v!==''?E.durationText(v):'';if(BOOLEAN_IDS.has(key))v=v?'Yes':'No';return csvQuote(v);});lines.push(values.join(','));}
 downloadBlob(new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),filename(kind,'csv'));}
 function parseCSV(text){const rows=[];let row=[],cell='',quoted=false;const s=text.replace(/^\uFEFF/,'');for(let i=0;i<s.length;i++){const ch=s[i];if(quoted){if(ch==='"'&&s[i+1]==='"'){cell+='"';i++;}else if(ch==='"')quoted=false;else cell+=ch;}else if(ch==='"'){quoted=true;}else if(ch===','){row.push(cell);cell='';}else if(ch==='\n'){row.push(cell.replace(/\r$/,''));rows.push(row);row=[];cell='';}else cell+=ch;}if(quoted)throw new Error('CSV引號不完整');if(cell!==''||row.length){row.push(cell.replace(/\r$/,''));rows.push(row);}return rows;}
 async function importCSV(ev){const file=ev.target.files?.[0];if(!file)return;const notice=$('importNotice');try{const raw=await file.text();const all=parseCSV(raw);if(all.length<2)throw new Error('CSV沒有資料列');const first=all.shift();const expected=['Record ID','Project Name','Research Version','Final Research Size','Trade Date'];if(!expected.every(x=>first.includes(x)))throw new Error('CSV格式不符合本Project，拒絕匯入其他Journal以避免資料污染。');
- const colmap=first.map(h=>Object.keys(COLUMN_LABELS).find(k=>COLUMN_LABELS[k]===h)||(CSV_KEYS.includes(h)?h:null));let added=0,updated=0,skipped=0;
+ const csvLegacyAliases={'First Retest In Session':'retestInSession'};const colmap=first.map(h=>Object.keys(COLUMN_LABELS).find(k=>COLUMN_LABELS[k]===h)||csvLegacyAliases[h]||(CSV_KEYS.includes(h)?h:null));let added=0,updated=0,skipped=0;
  for(const row of all){if(row.every(v=>!String(v).trim()))continue;const rawItem={};row.forEach((v,i)=>{if(colmap[i])rawItem[colmap[i]]=v;});if(rawItem.project!=='Break out setup testing'||rawItem.version!=='Research V0.1'||!E.PRODUCTS[rawItem.product]){skipped++;continue;}
- for(const k of BOOLEAN_IDS)rawItem[k]=rawItem[k]==='Yes'||rawItem[k]==='true';
+ // Only genuinely old CSVs lacked the new session columns. Never reinterpret a blank new-version field.
+ const legacyFile=!first.includes('Entry Session')&&!first.includes('BHE Completed Session');
+ if(legacyFile){const normalized=normalizeLegacySessionFields(rawItem);for(const key of ['bheCompletedSession','entrySession','entryInSession','londonBreakoutIntact','priorRetestOccurred','nyRebreak'])rawItem[key]=normalized[key];}
+ for(const k of BOOLEAN_IDS)rawItem[k]=rawItem[k]===true||rawItem[k]==='Yes'||rawItem[k]==='true';
  rawItem.q2Subtypes=(rawItem.q2Subtypes||'').split('+').filter(x=>E.Q2_SUBTYPES.includes(x));
  const preservedTime=E.duration(rawItem.timeToRF);rawItem.timeToRF=Number.isFinite(preservedTime)?E.durationText(preservedTime):'';
  if(!E.STATES[rawItem.mainState]||!E.STATES[rawItem.officialState]||!['Long','Short'].includes(rawItem.tradeDirection)){skipped++;continue;}
@@ -226,7 +275,25 @@ const tiles=[['正式研究Entry',s.n],['有效0注Setup',zero.length],['無效�
 $('statsCards').innerHTML=tiles.map(([label,value])=>`<div class="stat-card"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></div>`).join('');
 const zeroResearch=zero.filter(r=>['Live','Practice'].includes(r.mode));const zeroAvg=zeroResearch.map(r=>E.toNumber(r.normalizedR)).filter(x=>x!==null);const avg=zeroAvg.length?numberText(zeroAvg.reduce((a,b)=>a+b,0)/zeroAvg.length):'—';
 let html=`<p class="state-note">有效0注：共 ${zero.length} 筆，當中Live/Practice ${zeroResearch.length} 筆，其中 ${zeroAvg.length} 筆有Hypothetical R，平均Normalized=${avg}R；Research Actual R全部0，唔計主績效。</p>`;
-const groups=[['按產品',r=>r.product],['按半年度',r=>r.tradeDate?`${r.tradeDate.slice(0,4)} ${Number(r.tradeDate.slice(5,7))<=6?'H1':'H2'}`:'未知'],['Opening Context',r=>r.openingContext||'待分類'],['Market State Pair',r=>(r.mainState||'?')+' × '+(r.effectiveSecondary||'?')],['Raw P / P3',r=>r.rawP+(r.p3Context?'-'+r.p3Context:'')],['Native Q',r=>r.nativeQ+(r.nativeQ==='Q2'&&r.q2Subtypes?.length?' '+r.q2Subtypes.join('+'):'')],['Retest vs Reclaim',r=>r.retestVsReclaim||'N/A'],['Entry-TF Main Structure',r=>r.entryMainStructure||'Unknown'],['Entry-TF Working Structure',r=>r.entryWorkingStructure||'Unknown'],['Research Size',r=>String(r.finalSize)]];
+// New FX/XAU cross-session research: London Entry vs NY Entry, BHE completed in London vs NY.
+// Numerators use only observed MFE / time samples; Review and zero-size remain outside main performance.
+const median=values=>{if(!values.length)return null;const arr=[...values].sort((a,b)=>a-b);const i=Math.floor(arr.length/2);return arr.length%2?arr[i]:(arr[i-1]+arr[i])/2;};
+const fxResearch=main.filter(r=>E.isFxXau(r.product));
+for(const [title,groupKey] of [
+  ['FX／XAU｜London Breakout → Entry Session',r=>normalizeLegacySessionFields(r).entrySession],
+  ['FX／XAU｜London Breakout → BHE Completed Session',r=>normalizeLegacySessionFields(r).bheCompletedSession]
+]){
+  const sets=new Map();for(const item of fxResearch){const key=groupKey(item);if(!sets.has(key))sets.set(key,[]);sets.get(key).push(item);}
+  html+=`<h3>${escapeHtml(title)}</h3><p class="state-note">只計可執行Live／Practice；各項到價率以同組Entry總數為分母，Median MFE／Time to RF只使用有輸入嘅紀錄。</p><div class="matrix-scroll"><table class="matrix-table"><thead><tr><th>Session</th><th>n</th><th>Normalized E</th><th>RF Rate</th><th>TP2 Rate</th><th>Median MFE</th><th>Median Time to RF</th></tr></thead><tbody>`;
+  for(const [name,items] of [...sets.entries()].sort((a,b)=>b[1].length-a[1].length)){
+    const st=stats(items),mfe=median(items.map(r=>E.toNumber(r.mfeR)).filter(v=>v!==null));
+    const rf=median(items.filter(r=>r.reachedRF==='Yes').map(r=>E.toNumber(r.timeToRF)).filter(v=>v!==null));
+    html+=`<tr><td>${escapeHtml(name)}</td><td>${st.n}</td><td>${st.expectancy===null?'—':numberText(st.expectancy)+'R'}</td><td>${st.n?(100*st.rf/st.n).toFixed(1)+'%':'—'}</td><td>${st.n?(100*st.tp2/st.n).toFixed(1)+'%':'—'}</td><td>${mfe===null?'—':numberText(mfe)+'R'}</td><td>${rf===null?'—':E.durationText(Math.round(rf))}</td></tr>`;
+  }
+  html+='</tbody></table></div>';
+}
+
+const groups=[['Entry Session',r=>normalizeLegacySessionFields(r).entrySession],['BHE Completed Session',r=>normalizeLegacySessionFields(r).bheCompletedSession],['按產品',r=>r.product],['按半年度',r=>r.tradeDate?`${r.tradeDate.slice(0,4)} ${Number(r.tradeDate.slice(5,7))<=6?'H1':'H2'}`:'未知'],['Opening Context',r=>r.openingContext||'待分類'],['Market State Pair',r=>(r.mainState||'?')+' × '+(r.effectiveSecondary||'?')],['Raw P / P3',r=>r.rawP+(r.p3Context?'-'+r.p3Context:'')],['Native Q',r=>r.nativeQ+(r.nativeQ==='Q2'&&r.q2Subtypes?.length?' '+r.q2Subtypes.join('+'):'')],['Retest vs Reclaim',r=>r.retestVsReclaim||'N/A'],['Entry-TF Main Structure',r=>r.entryMainStructure||'Unknown'],['Entry-TF Working Structure',r=>r.entryWorkingStructure||'Unknown'],['Research Size',r=>String(r.finalSize)]];
 for(const [title,getKey] of groups){const groupsMap=new Map();for(const r of main){const key=getKey(r);if(!groupsMap.has(key))groupsMap.set(key,[]);groupsMap.get(key).push(r);}html+=`<h3>${escapeHtml(title)}</h3><div class="matrix-scroll"><table class="matrix-table"><thead><tr><th>分組</th><th>n</th><th>Win%</th><th>Normalized E</th><th>Actual R</th><th>2R</th><th>Avg MFE</th><th>Avg MAE</th><th>TP2</th><th>RF</th></tr></thead><tbody>`;
 for(const [name,items] of [...groupsMap.entries()].sort((a,b)=>b[1].length-a[1].length)){const x=stats(items);html+=`<tr><td>${escapeHtml(name)}</td><td>${x.n}</td><td>${x.results?x.winrate.toFixed(1)+'%':'—'}</td><td>${x.expectancy===null?'—':numberText(x.expectancy)}</td><td>${numberText(x.actual)}</td><td>${x.twoRHit}/${x.mfeN}</td><td>${x.mfeAvg===null?'—':numberText(x.mfeAvg)}</td><td>${x.maeAvg===null?'—':numberText(x.maeAvg)}</td><td>${x.tp2}</td><td>${x.rf}</td></tr>`;}html+='</tbody></table></div>';}
 $('statsTables').innerHTML=html;

@@ -1647,3 +1647,21 @@ dialog::backdrop {
 .paste-image-section .image-preview .preview-item {min-width:145px;}
 .paste-image-section .image-preview .preview-item img {width:150px;height:110px;object-fit:contain;}
 .paste-image-section .notice {font-size:.82rem; line-height:1.4;}
+
+/* Research-only All-Market full decision summary, styled after Master Trade result card */
+.decision-jump{margin:15px 0 0;font-size:.85rem}.decision-jump a{color:var(--accent);font-weight:750}
+.decision-card{scroll-margin-top:80px}.decision-card .section-title h2{font-size:clamp(1.03rem,2.2vw,1.4rem)}
+.decision-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:17px 0}
+.decision-summary>div{padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);display:grid;gap:7px}
+.decision-summary small{color:var(--muted);font-size:.72rem}.decision-summary strong{font-size:1.1rem}
+.decision-group{margin-top:17px}.decision-group h3{font-size:.91rem;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:9px;margin-bottom:8px}
+.decision-group .result-lines{gap:5px}.decision-group .result-lines>div{min-width:0;grid-template-columns:minmax(125px,39%) minmax(0,1fr);align-items:start}
+.decision-group .result-lines strong{font-size:.87rem;text-align:right;overflow-wrap:anywhere;word-break:normal}
+.decision-group .result-lines span{font-size:.78rem;line-height:1.5}
+.decision-final{margin:20px 0 12px;border-radius:15px;border:1px solid var(--accent);background:var(--panel);padding:17px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.decision-final span{font-weight:700;color:var(--muted)}.decision-final strong{font-size:1.6rem;font-variant-numeric:tabular-nums}
+.decision-explanations{border:1px solid var(--border);background:var(--bg);padding:13px 17px;border-radius:12px;line-height:1.65;font-size:.86rem}
+.decision-explanations h3{margin:0 0 8px}.decision-explanations ol{margin:6px 0;padding-left:22px}.decision-explanations li+li{margin-top:6px}
+.decision-history-details{margin:20px 0;border-radius:12px;border:1px solid var(--border);padding:12px}
+.decision-history-details>summary{cursor:pointer;font-weight:800;color:var(--accent)}
+@media(max-width:520px){.decision-summary{gap:5px}.decision-summary>div{padding:9px}.decision-summary strong{font-size:.9rem}.decision-summary small{font-size:.62rem}.decision-group .result-lines>div{grid-template-columns:minmax(100px,39%) minmax(0,1fr);padding:10px}.decision-group .result-lines strong{font-size:.8rem}.decision-final strong{font-size:1.28rem}}

@@ -1,4 +1,4 @@
-# Break out setup testing｜Research V0.1（介面修訂 V0.1.1）
+# Break out setup testing｜Research V0.1（App V0.1.2｜London→NY延續版）
 
 ## 獨立系統／隔離說明
 
@@ -7,7 +7,7 @@
 - 建議：`/breakout-research/`；舊Master Trade App維持原本路徑。
 - 研究紀錄 localStorage key：`breakoutResearchV01Records`；不讀取舊Journal的 `masterTradePracticeJournalV1Records`。
 - 本地截圖 IndexedDB：`breakoutResearchV01Images`；不讀取舊Journal的圖庫。
-- PWA cache：`breakout-research-v0.1-20261104-r3`；不刪除非本Project cache。
+- PWA cache：`breakout-research-v0.1.2-20261104-r4`；不刪除非本Project cache。
 - CSV有獨立 Project Name/Research Version 檢查，拒絕把Master Trade CSV直接匯入。
 - 沒有任何 V1.4 E、P2-E、Production Rule 1/3、Shadow Rule 2/4 之判斷或調用。
 
@@ -24,7 +24,7 @@
 
 - 產品：HSI(OPR)、GER40(POR)、EURUSD/GBPUSD/USDCHF/XAUUSD(Asia H/L → London)。
 - Market States七態及Secondary Structural Gap：Gap OFF=Official；Gap ON=Working，必須有合格Trigger 1/2。只有Main同Effective Secondary為同方向Healthy/Weak，且交易方向順兩者，先可交易。
-- Break + Hold + Extend缺一不可，亦必須 First Valid Retest；FX/XAU London時段內完成突破和Retest。
+- Break + Hold + Extend缺一不可，亦必須 First Valid Retest；FX/XAU必須London發生Break，但可於同一交易週期New York完成BHE、首次有效Retest及Entry。
 - Range Breakout前方向須可判斷，先可分「順向順勢」「反向順勢」。未分類者記Skip，不污染統計。
 - Raw P=Research P，絕不升P2-E；Q3須獨立判斷，BHE不會自動升級Q3；Q2 subtype可多選（包含R/F/S/D/RR/Structured）。
 - 雙Healthy同向：P1/P2 Q3=1，Q2=.5；P3 Q3=.5，Q2=.25；其餘0。
@@ -60,3 +60,24 @@
 - 部分HTTPS環境可使用「從剪貼簿加入圖片」按鈕，若瀏覽器拒絕授權，請用Ctrl+V／⌘+V。
 - 表單及新版CSV移除「Breakout時間（可選）」「First Retest時間（可選）」「入場時間（可選）」。**BHE→First Retest（H/M）**、Time to RF及Exit時間仍保留。
 - 舊CSV即使帶有已移除的三個欄，仍可讀取其餘欄位；匯出時不會再包含三個欄。研究版本識別仍維持 `Research V0.1`，避免造成既有CSV匯入中斷。
+
+
+## Research V0.1.2｜FX／XAU London Breakout 延續至NY（2026-11-04）
+
+- **獨立App**，Master Trade V1.30.35 檔案同儲存空間均未修改。
+- FX／XAU只有London可以形成原始Asia H/L Break；BHE、首次有效Retest及Entry可於London或New York，必須是同一交易週期。
+- BHE Completed Session、Entry Session均明確紀錄；Breakout Session固定London。
+- 原London突破若Break-Accept失效、出現更早Retest、或NY重新獨立突破：Invalid／Skip。
+- NY先完成BHE亦接受，但不允許NY完成BHE後將Entry Session填London。
+- 新增跨Session連續性手動確認：`原London Breakout仍然有效` 必須勾選；`已出現更早Retest`、`NY重新突破` 必須保持未勾選；填寫實際Entry Session及BHE Completed Session，並勾選Session內入場。
+- HSI／GER40沿用原Opening Session選項，唔受新判斷影響。
+- 既有V0.1.1 records及CSV缺少跨Session欄位時，按照舊規則視為London-only（只作舊檔兼容，並非事後驗證NY延續）。
+- 研究統計新增Entry Session / BHE Completed Session分組，用於研究NY延遲入場。
+- Research sizing、Raw P、Q、Hard Veto、0-size記錄均不變；不套V1.4 Production/Shadow Rules。
+
+
+## V0.1.3｜All-Market Master Trade Matrix｜完整判斷（Research-only）
+- 計算器新增原版 V1.30.35 風格嘅完整判斷結果面板（主次Judge、Gap、Session、Opening Context、Raw P/Native Q、BHE、Risk、Research Base/Final、Skip原因）。
+- History 紀錄詳情可以展開同一套完整判斷；直接用紀錄內輸入重算（唔會改寫已儲存注碼或交易資料）。
+- 完整判斷由獨立 `judgment.js` 提供，直接讀 `engine.js` 嘅結果，唔會執行 Master Trade V1.4 Rule 1–4、E升格或Runner。
+- 本次為呈現層更新；Research V0.1 sizing、Session rules、localStorage key、IndexedDB key、CSV schema以及原有 Master Trade V1.30.35 全部不變。
