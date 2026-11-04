@@ -1,0 +1,13 @@
+{
+  "id":"./breakout-research-v0.1",
+  "name":"Break out setup testing | Research V0.1",
+  "short_name":"BO Research",
+  "start_url":"./index.html",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#090d15",
+  "theme_color":"#162033",
+  "lang":"zh-HK",
+  "description":"Independent Opening Range Breakout research sizing and backtest journal; no Master Trade V1.4 rules.",
+  "icons":[{"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
