@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const E=require('../engine.js');
-const complete={product:'EURUSD',mainState:'healthyBull',officialState:'healthyBull',workingState:'healthyBull',gapMode:'off',gapTrigger:'',tradeDirection:'Long',preOpenDirection:'Bull',rawP:'P1',p3Context:'',nativeQ:'Q3',q2Subtypes:[],rangeEstablished:true,breakoutSessionValid:true,breakConfirmed:true,holdConfirmed:true,extendConfirmed:true,firstRetestValid:true,retestInSession:true,rr:'2',cleanSpaceR:'2.2',reachedRF:'No'};
+const complete={product:'EURUSD',mainState:'healthyBull',officialState:'healthyBull',workingState:'healthyBull',gapMode:'off',gapTrigger:'',tradeDirection:'Long',preOpenDirection:'Bull',rawP:'P1',p3Context:'',nativeQ:'Q3',q2Subtypes:[],rangeEstablished:true,breakoutSessionValid:true,breakConfirmed:true,holdConfirmed:true,extendConfirmed:true,firstRetestValid:true,retestInSession:true,reachedRF:'No'};
 const t=(updates={})=>E.evaluate({...complete,...updates});
 const specs=[
  ['HH P1 Q3',{},1],['HH P2 Q2',{rawP:'P2',nativeQ:'Q2'},.5],['HH P3-PB Q3',{rawP:'P3',p3Context:'PB'},.5],
@@ -22,7 +22,7 @@ assert.equal(t({preOpenDirection:'Bear'}).openingContext,'反向順勢');assert.
 assert.equal(t({nativeQ:'Q2',q2Subtypes:['F','S']}).finalSize,.5,'F+S must NOT be rule1');
 assert.equal(t({rawP:'P3',p3Context:'PB',nativeQ:'Q3',officialState:'healthyBear'}).finalSize,0,'conflict rule3 not applicable');
 assert.equal(t({normalizedR:'-1',rawP:'P2'}).actualR,-1);
-assert.equal(t({rr:'1.4'}).finalSize,0,'RR veto');assert.equal(t({cleanSpaceR:'1.9'}).finalSize,0,'clean-space veto');
+assert.equal(t({rr:'1.4'}).finalSize,1,'retired RR field ignored');assert.equal(t({cleanSpaceR:'1.9'}).finalSize,1,'retired clean-space field ignored');assert.equal(t({manualVeto:true}).finalSize,0,'explicit manual veto');
 assert.equal(t({timeToRF:'1H30M'}).timeToRF,90);assert.equal(t({timeToRF:'1H30M'}).reachedRF,'Yes');
 assert.equal(t({mfeR:''}).tp2,'');assert.equal(t({mfeR:'4'}).tp2,'Yes');assert.equal(t({mfeR:'3.99'}).tp2,'No');
 assert.equal(t({normalizedR:'0'}).actualR,0);

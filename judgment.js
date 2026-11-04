@@ -29,8 +29,6 @@
     const subtype=Array.isArray(input.q2Subtypes)?input.q2Subtypes:typeof input.q2Subtypes==='string'?input.q2Subtypes.split('+').filter(Boolean):[];
     const qDetail=input.nativeQ==='Q2'?(subtype.length?'Q2-'+subtype.join('+'):'Q2｜未標Subtype'):input.nativeQ||'未選';
     const vetoItems=[];
-    if(E.toNumber(input.rr)!==null&&E.toNumber(input.rr)<1.5)vetoItems.push('RR < 1.5R');
-    if(E.toNumber(input.cleanSpaceR)!==null&&E.toNumber(input.cleanSpaceR)<2)vetoItems.push('Clean Space < 2R');
     for(const [field,label] of [['lateEntry','Late Entry'],['invalidExecution','Execution Invalid'],['htfObstacle','HTF Hard Obstacle'],['manualVeto','Other Hard Veto']])if(input[field])vetoItems.push(label);
     const invalidFields=[];
     if(!input.rangeEstablished)invalidFields.push('Range未建立');
@@ -60,7 +58,7 @@
       ]},
       {title:'02｜Opening Story與時間',rows:[
         ['開市前Range方向',input.preOpenDirection==='Bull'?'Bullish ↑':input.preOpenDirection==='Bear'?'Bearish ↓':'未確認'],
-        ['Opening Context',d.openingContext||'未能分類'],
+        ['Opening Context',d.openingContext||(!['Bull','Bear'].includes(input.preOpenDirection)?'Range方向未確認':d.directionPermission!=='Yes'?'Direction Permission不符合':'未能分類')],
         ['BHE Completed Session',d.bheCompletedSession||'未選'],
         ['Entry Session',d.entrySession||'未選'],
         ['Same Breakout Continuation',fx?d.continuationValid:'N/A｜Opening Session'],
@@ -78,7 +76,6 @@
         ['Setup Valid',d.validSetup]
       ]},
       {title:'04｜風險、注碼與結果',rows:[
-        ['RR / Clean Space',`${E.toNumber(input.rr)===null?'未輸入':input.rr+'R'} / ${E.toNumber(input.cleanSpaceR)===null?'未輸入':input.cleanSpaceR+'R'}`],
         ['Hard Veto',vetoItems.length?'Yes｜'+vetoItems.join('、'):'No'],
         ['Market State上限',d.directionPermission!=='Yes'?'0 注（方向不允許）':E.STATES[input.mainState]?.kind==='H'&&effective?.kind==='H'?'1.00 注｜雙健康同向':'0.50 注｜同向有弱勢'],
         ['P × Q／方向Matrix（Base）',size(d.baseSize)],

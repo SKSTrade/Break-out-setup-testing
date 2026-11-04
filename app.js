@@ -11,7 +11,7 @@ const IMAGE_TABLE='photos';
 const INPUTS=[
   'tradeDate','product','referenceRange','breakoutSession','bheCompletedSession','entrySession','preOpenDirection','entryTF','mainTF','mainState','mainT0Subtype','secondaryTF','officialState','officialT0Subtype','gapMode','gapTrigger','workingState','workingT0Subtype',
   'rawP','p3Context','nativeQ','rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','firstRetestValid','retestInSession','entryInSession','londonBreakoutIntact','priorRetestOccurred','nyRebreak',
-  'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','rr','cleanSpaceR',
+  'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure',
   'lateEntry','invalidExecution','htfObstacle','manualVeto','riskNote','normalizedR','mfeR','maeR','reachedRF','timeToRF','deepRF','deepRFOriginalSL',
   'deepRFShadowMfe','deepRFNoRF','exitTimestamp','originalTradeId','originalMatch','notes'
 ];
@@ -33,7 +33,7 @@ const COLUMN_LABELS={
   breakConfirmed:'Break Confirmed',holdConfirmed:'Hold Confirmed',extendConfirmed:'Extend Confirmed',firstRetestValid:'First Valid Retest',retestInSession:'First Retest In Allowed Session',entryInSession:'Entry In Allowed Session',londonBreakoutIntact:'Original London Breakout Intact',priorRetestOccurred:'Earlier Retest Occurred',nyRebreak:'NY Independent Rebreak',
   retestAcceptance:'Retest Acceptance',retestInternal:'Retest Internal Structure',
   retestVsReclaim:'Retest vs Reclaim Structure',bheToRetest:'BHE to First Retest H/M',entryMainStructure:'Entry-TF Main Structure',entryWorkingStructure:'Entry-TF Working Structure',
-  rr:'RR',cleanSpaceR:'Clean Expansion Space R',lateEntry:'Late Entry',invalidExecution:'Execution Invalid',htfObstacle:'Hard HTF Obstacle',manualVeto:'Other Hard Veto',riskNote:'Risk Note',
+  lateEntry:'Late Entry',invalidExecution:'Execution Invalid',htfObstacle:'Hard HTF Obstacle',manualVeto:'Other Hard Veto',riskNote:'Risk Note',
   normalizedR:'Normalized R',mfeR:'MFE R',maeR:'MAE R',reachedRF:'去唔去到推RF位',timeToRF:'Time to RF H/M',deepRF:'Deep-RF Triggered',
   deepRFOriginalSL:'Deep-RF Original SL Hit',deepRFShadowMfe:'Deep-RF Shadow MFE R',deepRFNoRF:'Deep-RF No RF Final R',
   exitTimestamp:'Exit Timestamp',originalTradeId:'Original Trade ID',originalMatch:'Original Journal Match',notes:'Notes',chartImageCount:'Local Screenshot Count'
@@ -41,7 +41,7 @@ const COLUMN_LABELS={
 const CSV_KEYS=[...new Set(['id','createdAt','updatedAt','project','version','mode','tradeDate','product','family','referenceRange','breakoutSession','bheCompletedSession','entrySession','continuationValid','tradeDirection','preOpenDirection','openingContext',
   'entryTF','mainTF','mainState','mainT0Subtype','secondaryTF','officialState','officialT0Subtype','gapMode','gapTrigger','workingState','workingT0Subtype','source','effectiveSecondary','directionPermission','rawP','p3Context','researchP','nativeQ','q2Subtypes',
   'rangeEstablished','breakoutSessionValid','breakConfirmed','holdConfirmed','extendConfirmed','bheValid','firstRetestValid','retestInSession','entryInSession','londonBreakoutIntact','priorRetestOccurred','nyRebreak',
-  'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','rr','cleanSpaceR','lateEntry','invalidExecution','htfObstacle','manualVeto','riskNote',
+  'retestAcceptance','retestInternal','retestVsReclaim','bheToRetest','entryMainStructure','entryWorkingStructure','lateEntry','invalidExecution','htfObstacle','manualVeto','riskNote',
   'baseSize','validSetup','hardVeto','finalSize','executable','status','skipReason','normalizedR','actualR','mfeR','maeR','reachedRF','timeToRF','tp2','deepRF','deepRFOriginalSL','deepRFShadowMfe','deepRFNoRF',
   'exitTimestamp','originalMatch','originalTradeId','notes','chartImageCount'])];
 let records=[];let editingId=null;let selectedIds=new Set();let currentDecision=null;let existingPreviewURLs=[];let rfAuto=false;let pendingImages=[];
@@ -76,8 +76,10 @@ function init(){
   setupFilter('filterEntryWorking',['Opposing Intact','Opposing Broken / Transition','Aligned'].map(x=>[x,x]));
   setupFilter('filterRetest',[['hold','Hold'],['sweepReclaim','Sweep-Reclaim'],['breakAccept','Break-Accept'],['na','N/A']]);
   $('tradeDate').value=localDate();
+  applyProductEntryTFDefault();
   try {const data=JSON.parse(localStorage.getItem(STORE)||'[]');records=Array.isArray(data)?data.filter(x=>x&&typeof x==='object'):[];} catch {records=[];}
   $('tradeForm').addEventListener('input',()=>update());$('tradeForm').addEventListener('change',(e)=>{
+    if(e.target?.id==='product')applyProductEntryTFDefault();
     if(e.target?.id==='timeToRF'&&$('timeToRF').value.trim())rfAuto=true;
     if(e.target?.id==='reachedRF'&&$('reachedRF').value==='No'){$('timeToRF').value='';rfAuto=false;}
     update();
@@ -117,6 +119,16 @@ function getInput(){
   data.mode=selected('mode');data.tradeDirection=selected('direction');
   data.q2Subtypes=Array.from(document.querySelectorAll('#q2SubtypeChoices input:checked')).map(i=>i.value);
   return data;
+}
+// Only applies to new input selection / deliberate product changes; never overwrites an edited historic Entry TF.
+function applyProductEntryTFDefault(){
+  $('entryTF').value=E.isFxXau($('product').value)?'15M':'1M';
+}
+function openingContextLabel(input,decision){
+  if(decision.openingContext)return decision.openingContext;
+  if(!['Bull','Bear'].includes(input.preOpenDirection))return 'Range方向未確認';
+  if(decision.directionPermission!=='Yes')return 'Direction Permission不符合';
+  return '待分類';
 }
 function normalizeLegacySessionFields(record){
   const fx=E.isFxXau(record.product);const native=E.PRODUCTS[record.product]?.session||'';
@@ -177,7 +189,7 @@ function update(){
   if(input.reachedRF==='No'){$('timeToRF').value='';}
   input.gapTrigger=$('gapTrigger').value;input.p3Context=$('p3Context').value;
   currentDecision=E.evaluate(input);const d=currentDecision;
-  $('openingContext').value=d.openingContext||'待分類（不符合有效Setup）';$('researchP').value=d.researchP||'';
+  $('openingContext').value=openingContextLabel(input,d);$('researchP').value=d.researchP||'';
   $('secondarySourceView').textContent=d.source;$('secondaryEffectiveView').textContent=E.STATES[d.effectiveSecondary]?.label||'未選';
   $('directionPermissionView').textContent=d.directionPermission;$('bheView').textContent=d.bheValid;$('validSetupView').textContent=d.validSetup;
   $('baseSizeView').textContent=numberText(d.baseSize);$('finalSizeView').textContent=numberText(d.finalSize);$('executableView').textContent=d.executable;
@@ -205,7 +217,7 @@ async function saveRecord(ev){ev.preventDefault();update();const data=getInput()
   $('saveNotice').textContent=`已儲存 ${entry.tradeDate||'無日期'} ${entry.product}｜${entry.status}｜Research Size ${numberText(entry.finalSize)}${imageError}`;
   editingId=entry.id;$('saveBtn').textContent='更新研究紀錄';$('screenshotInput').value='';renderImagePreviews(entry.id);renderHistory();renderStats();
 }
-function resetForm(){editingId=null;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';  const form=$('tradeForm');form.reset();delete $('bheCompletedSession').dataset.product;delete $('entrySession').dataset.product;document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
+function resetForm(){editingId=null;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';  const form=$('tradeForm');form.reset();delete $('bheCompletedSession').dataset.product;delete $('entrySession').dataset.product;document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();applyProductEntryTFDefault();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
 function filterValues(id){return new Set(Array.from($(id).querySelectorAll('input:checked')).map(x=>x.value));}
 function multiMatch(set,value){return set.size===0||set.has(String(value??''));}
 function filteredRecords(){const from=$('filterFrom').value,to=$('filterTo').value;const f={};
@@ -232,7 +244,7 @@ $('dialogOverlay').classList.remove('hidden');try{const images=await getImages(r
 }
 function closeDialog(){$('dialogOverlay').classList.add('hidden');$('dialogContent').innerHTML='';clearImageObjectURLs();}
 function csvQuote(v){const value=Array.isArray(v)?v.join('+'):(v===null||v===undefined?'':String(v));return /[",\r\n]/.test(value)?'"'+value.replace(/"/g,'""')+'"':value;}
-function filename(kind,ext){return `BreakoutResearch-V0.1.3-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
+function filename(kind,ext){return `BreakoutResearch-V0.1.4-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
 function downloadBlob(blob,name){const link=document.createElement('a');const url=URL.createObjectURL(blob);link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}
 function exportCSV(items,kind){if(!items.length){alert('沒有紀錄可匯出。');return;}const headers=CSV_KEYS.map(k=>COLUMN_LABELS[k]||k);const lines=[headers.map(csvQuote).join(',')];for(const item of items){const source=normalizeLegacySessionFields(item);const values=CSV_KEYS.map(key=>{let v=source[key];if(key==='timeToRF')v=v!==null&&v!==undefined&&v!==''?E.durationText(v):'';if(BOOLEAN_IDS.has(key))v=v?'Yes':'No';return csvQuote(v);});lines.push(values.join(','));}
 downloadBlob(new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),filename(kind,'csv'));}

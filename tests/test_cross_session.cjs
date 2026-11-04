@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const E=require('../engine.js');
-const base={product:'GBPUSD',mainState:'healthyBull',officialState:'healthyBull',workingState:'healthyBull',gapMode:'off',gapTrigger:'',tradeDirection:'Long',preOpenDirection:'Bear',rawP:'P2',p3Context:'',nativeQ:'Q3',q2Subtypes:[],rangeEstablished:true,breakoutSessionValid:true,breakConfirmed:true,holdConfirmed:true,extendConfirmed:true,firstRetestValid:true,retestInSession:true,entryInSession:true,londonBreakoutIntact:true,priorRetestOccurred:false,nyRebreak:false,rr:2,cleanSpaceR:2.5};
+const base={product:'GBPUSD',mainState:'healthyBull',officialState:'healthyBull',workingState:'healthyBull',gapMode:'off',gapTrigger:'',tradeDirection:'Long',preOpenDirection:'Bear',rawP:'P2',p3Context:'',nativeQ:'Q3',q2Subtypes:[],rangeEstablished:true,breakoutSessionValid:true,breakConfirmed:true,holdConfirmed:true,extendConfirmed:true,firstRetestValid:true,retestInSession:true,entryInSession:true,londonBreakoutIntact:true,priorRetestOccurred:false,nyRebreak:false,};
 const run=(overrides={})=>E.evaluate({...base,...overrides});
 function valid(label, updates, expectedSize=1){const r=run(updates);assert.equal(r.validSetup,'Yes',label+' Valid Setup');assert.equal(r.finalSize,expectedSize,label+' size');return r;}
 function invalid(label,updates,reason){const r=run(updates);assert.equal(r.validSetup,'No',label);assert.equal(r.finalSize,0,label);if(reason)assert.ok(r.skipReason.includes(reason),label+' skipReason '+r.skipReason);return r;}
@@ -39,6 +39,7 @@ for(const product of ['HSI','GER40']){
 const legacy=valid('Old V0.1.1 CSV still London-only',{});assert.equal(legacy.entrySession,'London');assert.equal(legacy.bheCompletedSession,'London');
 // No product-specific override of Core Market State / Risk veto.
 invalid('Gap ON not qualified',{gapMode:'on',gapTrigger:'',workingState:'healthyBull',bheCompletedSession:'London',entrySession:'New York'},'Structural Gap');
-const veto=run({bheCompletedSession:'London',entrySession:'New York',rr:1.2});assert.equal(veto.finalSize,0);assert.equal(veto.hardVeto,'Yes');
+const retired=run({bheCompletedSession:'London',entrySession:'New York',rr:1.2,cleanSpaceR:0.5});assert.equal(retired.finalSize,1);assert.equal(retired.hardVeto,'No');
+const veto=run({bheCompletedSession:'London',entrySession:'New York',manualVeto:true});assert.equal(veto.finalSize,0);assert.equal(veto.hardVeto,'Yes');
 assert.equal(run({bheCompletedSession:'New York',entrySession:'New York',mfeR:5}).v14ProductionApplied,false);
 console.log('PASS FX/XAU London→NY scenarios A–Q, 4 products, HSI/GER40 isolation, old records, 0-size, P3, F+S, veto.');

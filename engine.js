@@ -79,12 +79,9 @@
       sessionChoicesValid&&bheBeforeOrDuringEntry&&entryInSession&&continuationValid);
 
     const firstRetest=Boolean(input.firstRetestValid);
-    const riskRR=toNumber(input.rr);
-    const cleanSpace=toNumber(input.cleanSpaceR);
-    // RR<1.5 and expansion clean-space<2R only when quantified. Missing data never creates invented PA thresholds.
-    const rrVeto=riskRR!==null&&riskRR<1.5;
-    const spaceVeto=cleanSpace!==null&&cleanSpace<2;
-    const hardVeto=Boolean(rrVeto||spaceVeto||input.lateEntry||input.invalidExecution||input.htfObstacle||input.manualVeto);
+    // Numerical RR / Clean Expansion Space inputs are retired in V0.1.4.
+    // Ignore old imported/stored values entirely: only explicit execution vetoes apply.
+    const hardVeto=Boolean(input.lateEntry||input.invalidExecution||input.htfObstacle||input.manualVeto);
     const validSetup=Boolean(j.gapQualified&&allowed&&openingContext&&bhe&&firstRetest&&sessionValid&&pComplete);
     const base=baseSize(mainState,j.effective,tradeDirection,rawP,nativeQ);
     const finalSize=validSetup&&!hardVeto?base:0;
@@ -106,8 +103,6 @@
     if(fx&&priorRetestOccurred)reasons.push('已有較早Retest，NY第二次Retest不可當First Retest');
     if(fx&&nyRebreak)reasons.push('London原突破未被接受／失效；NY重新Breakout不合資格');
     if(!pComplete)reasons.push('Raw P3未指定PB/MID/EXT');
-    if(rrVeto)reasons.push('RR<1.5');
-    if(spaceVeto)reasons.push('Clean expansion space<2R');
     if(input.lateEntry)reasons.push('Late entry / Session invalid');
     if(input.invalidExecution)reasons.push('Execution invalid');
     if(input.htfObstacle)reasons.push('Hard HTF obstacle');

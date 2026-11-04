@@ -81,3 +81,11 @@
 - History 紀錄詳情可以展開同一套完整判斷；直接用紀錄內輸入重算（唔會改寫已儲存注碼或交易資料）。
 - 完整判斷由獨立 `judgment.js` 提供，直接讀 `engine.js` 嘅結果，唔會執行 Master Trade V1.4 Rule 1–4、E升格或Runner。
 - 本次為呈現層更新；Research V0.1 sizing、Session rules、localStorage key、IndexedDB key、CSV schema以及原有 Master Trade V1.30.35 全部不變。
+
+
+## V0.1.4｜表單預設／Opening Context／風險欄位
+- Opening Context按Pre-open Direction及Main/Effective Secondary Direction Permission分類；未完成BHE/Retest不阻止方向分類。未分類時區分Range方向未確認、Direction Permission不符合。
+- Validation 預設Yes：Reference Range、Breakout Session、Break、Hold、Extend、Entry Session；預設No：First Valid Retest、First Retest in Allowed Session。只影響新建／Reset表單；舊紀錄保持記錄值。
+- Entry TF預設：HSI、GER40 = 1M；EURUSD、GBPUSD、USDCHF、XAUUSD = 15M；切換商品時自動更新；編輯既有紀錄保留原TF。
+- 移除RR、Clean Expansion Space數值欄位及其舊資料自動Veto；仍保留其他明示Hard Veto。新版CSV不輸出該兩欄，舊CSV仍可讀入，其舊RR/Space值不再參與size計算。
+- 此版本維持舊研究資料鍵值、研究版本與獨立儲存，不會修改Master Trade。
