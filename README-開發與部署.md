@@ -112,3 +112,14 @@
 - 紀錄庫詳情內截圖可點擊放大，支援上一張／下一張、鍵盤左右鍵及 Esc 關閉。
 - Valid 0-size Setup 照舊保留完整 hypothetical result，Research Actual R = 0。
 - Invalid / Skipped 不再刪除手動輸入嘅 Normalized R、MFE、MAE、RF、TP2 等研究觀察；Research Actual R 保持 N/A，而且所有正式績效、0注 cohort 及分組統計仍然排除 Invalid / Skipped。
+
+
+## V0.1.8｜完整判斷底部注碼摘要
+- Base Research Size／Final Research Size／Executable Candidate 三格摘要移至 All-Market Master Trade Matrix｜完整判斷面板最底部。
+- 只調整版面位置，Research sizing、Setup validity、CSV及歷史資料邏輯不變。
+
+
+## V0.1.9｜Product-based Judge TF defaults
+- HSI／GER40：Entry TF = 1M；Main Judge TF = 1H；Secondary Judge TF = 15M。
+- FX／XAU：Entry TF = 15M；Main Judge TF = 4H；Secondary Judge TF = 1H。
+- 新紀錄／主動切換品種時套用；編輯歷史紀錄時保留原有 TF。

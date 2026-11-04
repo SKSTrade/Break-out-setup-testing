@@ -8,7 +8,7 @@
 <script defer src="./engine.js"></script><script defer src="./judgment.js"></script><script defer src="./app.js"></script>
 </head>
 <body class="calculator-active">
-<header class="app-header"><div><p class="eyebrow">INDEPENDENT RESEARCH PROJECT · RESEARCH ONLY</p><h1>Break out setup testing</h1><p class="header-subtitle">Opening Range Breakout · BHE · First Retest</p></div><span class="version-badge">V0.1.7</span></header>
+<header class="app-header"><div><p class="eyebrow">INDEPENDENT RESEARCH PROJECT · RESEARCH ONLY</p><h1>Break out setup testing</h1><p class="header-subtitle">Opening Range Breakout · BHE · First Retest</p></div><span class="version-badge">V0.1.9</span></header>
 <nav class="tab-bar" aria-label="主要頁面"><button type="button" class="tab-button active" data-tab="calculator">計算器</button><button type="button" class="tab-button" data-tab="history">紀錄庫</button><button type="button" class="tab-button" data-tab="research">研究統計</button><button type="button" class="tab-button" data-tab="rulebook">研究規則</button></nav>
 
 <!-- Quick section navigation is UI-only; it does not read or alter Research decisions. -->
@@ -33,14 +33,14 @@
 <div class="grid2"><label>交易日期<input type="date" id="tradeDate" required></label><label>品種<select id="product"><option value="HSI">HSI</option><option value="GER40">GER40</option><option value="EURUSD" selected>EURUSD</option><option value="GBPUSD">GBPUSD</option><option value="USDCHF">USDCHF</option><option value="XAUUSD">XAUUSD</option></select></label></div>
 <div class="grid2"><label>參考範圍（Auto）<input id="referenceRange" readonly></label><label>Breakout Session（Auto）<input id="breakoutSession" readonly></label></div>
 <div class="grid2"><label>BHE Completed Session<select id="bheCompletedSession"><option value="">未選擇</option></select></label><label>Entry Session<select id="entrySession"><option value="">未選擇</option></select></label></div>
-<p class="state-note">Entry TF預設：HSI／GER40 = 1M；FX／XAU = 15M。Opening Context只按開市前Range方向與已確認嘅主次判方向分類，並唔取決於BHE／Retest是否已完成。</p><p class="state-note">FX/XAU：Break必須由London開始；BHE同首次有效Retest可延續至NY，但BHE完成時段不能遲過Entry時段。HSI／GER40仍維持原Opening Session規則。</p>
+<p class="state-note">Entry TF預設：HSI／GER40 = 1M；FX／XAU = 15M。Judge TF預設：HSI／GER40 = Main 1H + Secondary 15M；FX／XAU = Main 4H + Secondary 1H。Opening Context只按開市前Range方向與已確認嘅主次判方向分類，並唔取決於BHE／Retest是否已完成。</p><p class="state-note">FX/XAU：Break必須由London開始；BHE同首次有效Retest可延續至NY，但BHE完成時段不能遲過Entry時段。HSI／GER40仍維持原Opening Session規則。</p>
 <label>交易方向</label><div class="segmented" id="dirSwitch"><label><input type="radio" name="direction" value="Long" checked><span>Long ↑</span></label><label><input type="radio" name="direction" value="Short"><span>Short ↓</span></label></div>
 <div class="grid2"><label>開市前 Range 方向<select id="preOpenDirection"><option value="">未確認／唔清楚</option><option value="Bull">Bullish ↑</option><option value="Bear">Bearish ↓</option></select></label><label>Opening Context（Auto）<input readonly id="openingContext"></label></div>
 <label>Entry TF<select id="entryTF"><option selected>1M</option><option>3M</option><option>5M</option><option>15M</option><option>30M</option><option>1H</option><option>2H</option><option>4H</option></select></label>
 </article>
 <article id="rbMarketState" class="card jump-anchor"><div class="section-title"><span>02</span><h2>Market State + Structural Gap</h2></div>
 <div class="grid2"><label>Main Judge TF<select id="mainTF"><option>15M</option><option>30M</option><option>1H</option><option selected>4H</option><option>D</option><option>W</option></select></label><label>Main Judge Market State<select id="mainState" class="state-select"></select></label></div>
-<div class="grid2"><label>Secondary Judge TF<select id="secondaryTF"><option>5M</option><option selected>15M</option><option>30M</option><option>1H</option><option>4H</option></select></label><label>Secondary Official Market State<select id="officialState" class="state-select"></select></label></div>
+<div class="grid2"><label>Secondary Judge TF<select id="secondaryTF"><option>5M</option><option>15M</option><option>30M</option><option selected>1H</option><option>4H</option></select></label><label>Secondary Official Market State<select id="officialState" class="state-select"></select></label></div>
 <div class="grid2"><label>Main T0 Subtype<select id="mainT0Subtype"><option value="">N/A</option><option value="Balance">T0-Balance</option><option value="Post-Break">T0-Post-Break</option></select></label><label>Secondary Official T0 Subtype<select id="officialT0Subtype"><option value="">N/A</option><option value="Balance">T0-Balance</option><option value="Post-Break">T0-Post-Break</option></select></label></div>
 <div class="grid2"><label>Structural Gap<select id="gapMode"><option value="off">OFF｜Official</option><option value="on">ON｜Working</option></select></label><label>Structural Gap Trigger<select id="gapTrigger"><option value="">N/A</option><option value="gap1">Trigger 1｜One-leg Expansion</option><option value="gap2">Trigger 2｜Secondary B+H + Working reversal</option></select></label></div>
 <div id="workingPanel" class="conditional-panel hidden"><div class="grid2"><label>Secondary Working Market State<select id="workingState" class="state-select"></select></label><label>Secondary Working T0 Subtype<select id="workingT0Subtype"><option value="">N/A</option><option value="Balance">T0-Balance</option><option value="Post-Break">T0-Post-Break</option></select></label></div><p class="state-note">Gap ON只係將Secondary Judge資料來源由Official切換成Working；唔會自動將Working升做Healthy。請按V1.4既有Gap標準確認Trigger。</p></div>
@@ -79,7 +79,6 @@
 <article id="rbRiskSizing" class="card jump-anchor"><div class="section-title"><span>05</span><h2>Risk + Research Sizing</h2></div>
 <div class="check-grid"><label class="toggle-row"><input id="lateEntry" type="checkbox"><span><strong>Late entry / Session invalid</strong><small>原有時間／追價Hard Veto</small></span></label><label class="toggle-row"><input id="invalidExecution" type="checkbox"><span><strong>Execution invalid</strong><small>無效Reclaim、過快／過深、Trigger invalid等</small></span></label><label class="toggle-row"><input id="htfObstacle" type="checkbox"><span><strong>Hard HTF obstacle</strong><small>前方障礙無合理處理</small></span></label><label class="toggle-row"><input id="manualVeto" type="checkbox"><span><strong>其他V1.3 Hard Veto</strong><small>由交易者按既定規則判斷</small></span></label></div>
 <label>額外 Skip Reason / Risk註解（可選）<textarea id="riskNote" rows="2" placeholder="描述已存在Hard Veto；勿為新setup發明新門檻"></textarea></label>
-<div class="sizing-panel"><div><small>Base Research Size</small><strong id="baseSizeView">0.00</strong></div><div><small>Final Research Size</small><strong id="finalSizeView">0.00</strong></div><div><small>Executable Candidate</small><strong id="executableView">No</strong></div></div>
 <div class="status-box" id="statusBox">設定市場、BHE及First Retest後，自動判斷研究狀態。</div><p class="state-note" id="skipReasonView"></p>
 </article>
 <article id="rbDecisionResult" class="card decision-card jump-anchor" aria-labelledby="fullDecisionTitle">
@@ -94,6 +93,7 @@
 <div class="decision-final"><span>Final Research Size｜Research Only</span><strong id="fullDecisionFinal">0.00 注</strong></div>
 <div class="decision-explanations"><h3>判斷原因與限制</h3><div id="fullDecisionExplanations"></div></div>
 <p class="state-note">Market State、Opening Price Action、Retest及Hard Veto按你輸入嘅分類判斷；App冇K線數據，唔會自行確認實際市場結構。0注有效Setup可以保留假設結果。</p>
+<div class="sizing-panel"><div><small>Base Research Size</small><strong id="baseSizeView">0.00</strong></div><div><small>Final Research Size</small><strong id="finalSizeView">0.00</strong></div><div><small>Executable Candidate</small><strong id="executableView">No</strong></div></div>
 </article>
 <article id="rbResultJournal" class="card jump-anchor"><div class="section-title"><span>06</span><h2>Trade Management + Hypothetical Result</h2></div>
 <p class="muted">完整有效但0注嘅Setup，可以照填假設結果；Actual R仍會按Final Size計成0。Invalid / Skipped亦會保留你手動輸入嘅R／MFE／MAE／RF研究觀察，但Research Actual R顯示N/A，並完全排除正式績效及0注統計。</p>

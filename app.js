@@ -77,11 +77,11 @@ function init(){
   setupFilter('filterEntryWorking',['Opposing Intact','Opposing Broken / Transition','Aligned'].map(x=>[x,x]));
   setupFilter('filterRetest',[['hold','Hold'],['sweepReclaim','Sweep-Reclaim'],['breakAccept','Break-Accept'],['na','N/A']]);
   $('tradeDate').value=localDate();
-  applyProductEntryTFDefault();
+  applyProductTFDefaults();
   try {const data=JSON.parse(localStorage.getItem(STORE)||'[]');records=Array.isArray(data)?data.filter(x=>x&&typeof x==='object'):[];} catch {records=[];}
   $('tradeForm').addEventListener('input',()=>{awaitingNewTradeInput=false;update();});$('tradeForm').addEventListener('change',(e)=>{
     awaitingNewTradeInput=false;
-    if(e.target?.id==='product')applyProductEntryTFDefault();
+    if(e.target?.id==='product')applyProductTFDefaults();
     if(e.target?.id==='timeToRF'&&$('timeToRF').value.trim())rfAuto=true;
     if(e.target?.id==='reachedRF'&&$('reachedRF').value==='No'){$('timeToRF').value='';rfAuto=false;}
     update();
@@ -152,9 +152,12 @@ function getInput(){
   data.q2Subtypes=Array.from(document.querySelectorAll('#q2SubtypeChoices input:checked')).map(i=>i.value);
   return data;
 }
-// Only applies to new input selection / deliberate product changes; never overwrites an edited historic Entry TF.
-function applyProductEntryTFDefault(){
-  $('entryTF').value=E.isFxXau($('product').value)?'15M':'1M';
+// Only applies to new input selection / deliberate product changes; never overwrites an edited historic TF.
+function applyProductTFDefaults(){
+  const fx=E.isFxXau($('product').value);
+  $('entryTF').value=fx?'15M':'1M';
+  $('mainTF').value=fx?'4H':'1H';
+  $('secondaryTF').value=fx?'1H':'15M';
 }
 function openingContextLabel(input,decision){
   if(decision.openingContext)return decision.openingContext;
@@ -322,7 +325,7 @@ async function saveRecord(ev){
     $('resetBtn').disabled=false;
   }
 }
-function resetForm(){editingId=null;awaitingNewTradeInput=false;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';  const form=$('tradeForm');form.reset();delete $('bheCompletedSession').dataset.product;delete $('entrySession').dataset.product;document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();applyProductEntryTFDefault();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
+function resetForm(){editingId=null;awaitingNewTradeInput=false;rfAuto=false;pendingImages=[];$('pasteNotice').textContent='圖片會跟紀錄儲存喺本研究App獨立IndexedDB；唔會存入Master Trade。';  const form=$('tradeForm');form.reset();delete $('bheCompletedSession').dataset.product;delete $('entrySession').dataset.product;document.querySelectorAll('#q2SubtypeChoices input').forEach(i=>i.checked=false);$('mainState').value='healthyBull';$('officialState').value='healthyBull';$('workingState').value='healthyBull';$('tradeDate').value=localDate();applyProductTFDefaults();$('saveBtn').textContent='儲存研究紀錄（包括0注／Skip）';$('saveNotice').textContent='';$('screenshotInput').value='';clearImagePreviews();update();}
 function filterValues(id){return new Set(Array.from($(id).querySelectorAll('input:checked')).map(x=>x.value));}
 function multiMatch(set,value){return set.size===0||set.has(String(value??''));}
 function filteredRecords(){const from=$('filterFrom').value,to=$('filterTo').value;const f={};
@@ -353,7 +356,7 @@ function stepImageLightbox(delta){if(detailImageURLs.length<2)return;lightboxInd
 function closeImageLightbox(){$('imageLightbox').classList.add('hidden');$('lightboxImage').removeAttribute('src');document.body.classList.remove('lightbox-open');}
 function closeDialog(){closeImageLightbox();$('dialogOverlay').classList.add('hidden');$('dialogContent').innerHTML='';detailImageURLs=[];clearImageObjectURLs();}
 function csvQuote(v){const value=Array.isArray(v)?v.join('+'):(v===null||v===undefined?'':String(v));return /[",\r\n]/.test(value)?'"'+value.replace(/"/g,'""')+'"':value;}
-function filename(kind,ext){return `BreakoutResearch-V0.1.7-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
+function filename(kind,ext){return `BreakoutResearch-V0.1.9-${kind}-${new Date().toISOString().slice(0,10)}.${ext}`;}
 function downloadBlob(blob,name){const link=document.createElement('a');const url=URL.createObjectURL(blob);link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}
 function exportCSV(items,kind){if(!items.length){alert('沒有紀錄可匯出。');return;}const headers=CSV_KEYS.map(k=>COLUMN_LABELS[k]||k);const lines=[headers.map(csvQuote).join(',')];for(const item of items){const source=normalizeLegacySessionFields(item);const values=CSV_KEYS.map(key=>{let v=source[key];if(key==='timeToRF')v=v!==null&&v!==undefined&&v!==''?E.durationText(v):'';if(BOOLEAN_IDS.has(key))v=v?'Yes':'No';return csvQuote(v);});lines.push(values.join(','));}
 downloadBlob(new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),filename(kind,'csv'));}
